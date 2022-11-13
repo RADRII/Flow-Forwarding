@@ -82,7 +82,7 @@ public class Controller extends Node {
 					{
 						if(tlvs.containsKey(T_PORT))
 						{
-							System.out.println("Adding connection between " + packet.getSocketAddress() + " and " + ((TLVPacket) content).getPacketEncoding());
+							System.out.println("Adding connection between " + packet.getSocketAddress() + " and " + tlvs.get(T_CONTAINER));
 							connections.add(connect);
 						}
 						else	

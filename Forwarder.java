@@ -60,18 +60,19 @@ public class Forwarder extends Node {
                     HashMap<String,String> tlvs = ((TLVPacket)content).readEncoding();
                     if(tlvs.containsKey(T_PORT))
                     {
-                        System.out.println("Adding endpoint to forwarding table of forwarder");
+                        System.out.println("Adding " + tlvs.get(T_CONTAINER) + " to forwarding table of forwarder");
                         forwardingTable.put(tlvs.get(T_CONTAINER), tlvs.get(T_PORT));
+
+                        DatagramPacket ack;
+                        String val = T_MESSAGE + "3ACK";
+                        ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
+                        ack.setSocketAddress(packet.getSocketAddress());
 
                         System.out.println("Informing Controller");
                         packet.setSocketAddress(dstAddress);
                         socket.send(packet);
 
-                        System.out.println("Sending ACK to endpoint");
-                        DatagramPacket ack;
-                        String val = T_MESSAGE + "3ACK";
-                        ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
-                        ack.setSocketAddress(packet.getSocketAddress());
+                        System.out.println("Sending ACK to " + tlvs.get(T_CONTAINER));
                         socket.send(ack);
                     }
                     else
@@ -99,6 +100,8 @@ public class Forwarder extends Node {
 
                     if(forwardingTable.containsKey(tlvs.get(T_DEST_NAME)))
                         {
+                            System.out.println("Destination found in forwarding table - Sending packet.");
+
                             String containerNameEP = tlvs.get(T_DEST_NAME);
                             InetAddress ip = InetAddress.getByName(containerNameEP); 	
                             InetSocketAddress currentDstAddress = new InetSocketAddress(ip, Integer.parseInt(forwardingTable.get(containerNameEP)));
@@ -110,8 +113,8 @@ public class Forwarder extends Node {
                             forwardingTable.remove(containerNameEP);
 
                             DatagramPacket connectSend;
-                            String val = T_CONTAINER + Integer.toString(containerNameEP.length()) + containerNameEP;
-                            connectSend= new TLVPacket(CON_ENDPOINT, "2",  val).toDatagramPacket();
+                            String val = T_MESSAGE + "3DIS" + T_CONTAINER + Integer.toString(containerNameEP.length()) + containerNameEP;
+                            connectSend= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
                             connectSend.setSocketAddress(dstAddress);
                             socket.send(connectSend);
                         }
