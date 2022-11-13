@@ -79,12 +79,15 @@ public class Forwarder extends Node {
                     }
                     else if (tlvs.containsKey(4) && tlvs.get(4).equals("DIS"))
                     {
-                        forwardingTable.remove(tlvs.get(6));
-                        System.out.println("Informing Controller");
-                        DatagramPacket connectSend;
-                        connectSend= new TLVPacket("6", Integer.toString(tlvs.get(6).length()),  tlvs.get(6)).toDatagramPacket();
-                        connectSend.setSocketAddress(dstAddress);
-                        socket.send(connectSend);
+                        if(forwardingTable.containsKey(tlvs.get(6)))
+                        {
+                            forwardingTable.remove(tlvs.get(6));
+                            System.out.println("Informing Controller");
+                            DatagramPacket connectSend;
+                            connectSend= new TLVPacket("6", Integer.toString(tlvs.get(6).length()),  tlvs.get(6)).toDatagramPacket();
+                            connectSend.setSocketAddress(dstAddress);
+                            socket.send(connectSend);
+                        }
 
                         System.out.println("Sending ACK to endpoint");
                         DatagramPacket ack;
@@ -94,6 +97,16 @@ public class Forwarder extends Node {
                     }
                     else if(tlvs.containsKey(4) && tlvs.get(4).equals("SEN"))
                     {
+                        if(forwardingTable.containsKey(tlvs.get(6)))
+                        {
+                            forwardingTable.remove(tlvs.get(6));
+                            System.out.println("Informing Controller");
+                            DatagramPacket connectSend;
+                            connectSend= new TLVPacket("6", Integer.toString(tlvs.get(6).length()),  tlvs.get(6)).toDatagramPacket();
+                            connectSend.setSocketAddress(dstAddress);
+                            socket.send(connectSend);
+                        }
+
                         System.out.println("Sending ACK to endpoint");
                         DatagramPacket ack;
                         ack= new TLVPacket("5","3", "ACK").toDatagramPacket();
@@ -109,6 +122,14 @@ public class Forwarder extends Node {
                             InetSocketAddress currentDstAddress = new InetSocketAddress(ip, Integer.parseInt(forwardingTable.get(tlvs.get(6))));
                             packet.setSocketAddress(currentDstAddress);
                             socket.send(packet);
+
+                            //REMOVE CONNECRTION AFTER SINCE ENDPOINT MIGHT STOP RECEIVING
+                            System.out.println("Removing Connection");
+                            forwardingTable.remove(tlvs.get(6));
+                            DatagramPacket connectSend;
+                            connectSend= new TLVPacket("6", Integer.toString(tlvs.get(6).length()),  tlvs.get(6)).toDatagramPacket();
+                            connectSend.setSocketAddress(dstAddress);
+                            socket.send(connectSend);
                         }
                         else
                         {
@@ -146,7 +167,7 @@ public class Forwarder extends Node {
 		this.wait();
 	}
 
-    public static HashMap<Integer,String> readEncoding(int howMany, String encoding)
+	public static HashMap<Integer,String> readEncoding(int howMany, String encoding)
 	{
 		HashMap<Integer,String> toReturn = new HashMap<Integer,String>();
 
@@ -154,7 +175,12 @@ public class Forwarder extends Node {
 		{
 			Integer type =  Character.getNumericValue(encoding.charAt(0));
 			Integer length =  Character.getNumericValue(encoding.charAt(1));
-			String val = encoding.substring(2,2+length);
+
+			String val;
+			if(2+length > encoding.length())
+				val = encoding.substring(2);
+			else
+				val = encoding.substring(2,2+length);
 
 			toReturn.put(type,val);
 
