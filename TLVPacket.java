@@ -98,9 +98,9 @@ public class TLVPacket extends PacketContent {
 			Integer length =  Character.getNumericValue(encoding.charAt(1));
 			int beginIndex = 2;
 
-			if(type == 5)
+			if(type == 1)
 			{
-				int nextChar = Character.getNumericValue(encoding.charAt(2));
+				int nextChar = Character.getNumericValue(encoding.charAt(beginIndex));
 				if(nextChar >= 0 && nextChar < 10)
 				{
 					length = (length * 10) + nextChar;
