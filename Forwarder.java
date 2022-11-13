@@ -56,9 +56,7 @@ public class Forwarder extends Node {
 				}
 				else if(type.equals("1"))
 				{
-					int length  = Integer.parseInt(((TLVPacket)content).getPacketLength());
-					String encoding = ((TLVPacket)content).getPacketEncoding();
-					HashMap<Integer,String> tlvs = readEncoding(length,encoding);
+                    HashMap<Integer,String> tlvs = ((TLVPacket)content).readEncoding();
 
                     if(tlvs.containsKey(4) && tlvs.get(4).equals("REC"))
                     {
@@ -165,29 +163,6 @@ public class Forwarder extends Node {
 
         System.out.println("~Waiting for Contact~");
 		this.wait();
-	}
-
-	public static HashMap<Integer,String> readEncoding(int howMany, String encoding)
-	{
-		HashMap<Integer,String> toReturn = new HashMap<Integer,String>();
-
-		for(int i = 0; i < howMany; i++)
-		{
-			Integer type =  Character.getNumericValue(encoding.charAt(0));
-			Integer length =  Character.getNumericValue(encoding.charAt(1));
-
-			String val;
-			if(2+length > encoding.length())
-				val = encoding.substring(2);
-			else
-				val = encoding.substring(2,2+length);
-
-			toReturn.put(type,val);
-
-			if(i != howMany-1)
-				encoding = encoding.substring(2+length);
-		}
-		return toReturn;
 	}
 
 	/**

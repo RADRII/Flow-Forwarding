@@ -2,7 +2,6 @@ import java.net.DatagramSocket;
 import java.net.DatagramPacket;
 import java.net.SocketAddress;
 import java.util.ArrayList;
-import java.util.HashMap;
 
 /**
  *
@@ -114,29 +113,6 @@ public class Controller extends Node {
 				return true;
 		}
 		return false;
-	}
-
-	public static HashMap<Integer,String> readEncoding(int howMany, String encoding)
-	{
-		HashMap<Integer,String> toReturn = new HashMap<Integer,String>();
-
-		for(int i = 0; i < howMany; i++)
-		{
-			Integer type =  Character.getNumericValue(encoding.charAt(0));
-			Integer length =  Character.getNumericValue(encoding.charAt(1));
-
-			String val;
-			if(2+length > encoding.length())
-				val = encoding.substring(2);
-			else
-				val = encoding.substring(2,2+length);
-
-			toReturn.put(type,val);
-
-			if(i != howMany-1)
-				encoding = encoding.substring(2+length);
-		}
-		return toReturn;
 	}
 
 	/**

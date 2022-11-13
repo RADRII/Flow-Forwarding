@@ -1,5 +1,6 @@
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.HashMap;
 
 /**
  * Class for packet content that represents acknowledgements
@@ -50,8 +51,6 @@ public class TLVPacket extends PacketContent {
 		catch(Exception e) {e.printStackTrace();}
 	}
 
-
-
 	/**
 	 * Returns the content of the packet as String.
 	 *
@@ -86,5 +85,36 @@ public class TLVPacket extends PacketContent {
 	 */
 	public String getPacketEncoding() {
 		return encoding;
+	}
+
+	public HashMap<Integer,String> readEncoding()
+	{
+		HashMap<Integer,String> toReturn = new HashMap<Integer,String>();
+		int howMany = Integer.parseInt(this.length);
+		String encoding = this.encoding;
+
+		for(int i = 0; i < howMany; i++)
+		{
+			Integer type =  Character.getNumericValue(encoding.charAt(0));
+			Integer length =  Character.getNumericValue(encoding.charAt(1));
+			int beginIndex = 2;
+
+			if(type == 5)
+			{
+				int nextChar = Character.getNumericValue(encoding.charAt(2));
+				if(nextChar >= 0 && nextChar < 10)
+				{
+					length = (length * 10) + nextChar;
+					beginIndex++;
+				}
+			}
+
+			String val = encoding.substring(beginIndex, beginIndex+length);
+			toReturn.put(type,val);
+
+			if(i != howMany-1)
+				encoding = encoding.substring(beginIndex+length);
+		}
+		return toReturn;
 	}
 }

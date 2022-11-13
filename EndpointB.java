@@ -46,9 +46,7 @@ public class EndpointB extends Node
 				}
 				else if(type.equals("1")) //receiving message from somewhere
 				{
-					int length  = Integer.parseInt(((TLVPacket)content).getPacketLength());
-					String encoding = ((TLVPacket)content).getPacketEncoding();
-					HashMap<Integer,String> tlvs = readEncoding(length,encoding);
+					HashMap<Integer,String> tlvs = ((TLVPacket)content).readEncoding();
 
 					workerTerminal.println("From " + tlvs.get(7) + ": " + tlvs.get(5));
 					this.notify();
@@ -106,7 +104,7 @@ public class EndpointB extends Node
 					else
 						break;
 				}
-				workerTerminal.println("Enter the message to send.");
+				workerTerminal.println("Enter the message to send. Message cannot begin with a number.");
 				String message;
 				while(true)
 				{
@@ -132,29 +130,6 @@ public class EndpointB extends Node
 				workerTerminal.println("Not a valid input.");
 			}
 		}
-	}
-
-	public static HashMap<Integer,String> readEncoding(int howMany, String encoding)
-	{
-		HashMap<Integer,String> toReturn = new HashMap<Integer,String>();
-
-		for(int i = 0; i < howMany; i++)
-		{
-			Integer type =  Character.getNumericValue(encoding.charAt(0));
-			Integer length =  Character.getNumericValue(encoding.charAt(1));
-
-			String val;
-			if(2+length > encoding.length())
-				val = encoding.substring(2);
-			else
-				val = encoding.substring(2,2+length);
-
-			toReturn.put(type,val);
-
-			if(i != howMany-1)
-				encoding = encoding.substring(2+length);
-		}
-		return toReturn;
 	}
 
     public static void main(String[] args) {
