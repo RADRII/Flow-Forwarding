@@ -1,7 +1,8 @@
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.DatagramPacket;
-import java.net.SocketAddress;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 /**
  *
@@ -14,7 +15,7 @@ public class Controller extends Node {
 	static final int DEFAULT_SRC_PORT = 50000;
 
     ArrayList<Connection> connections = new ArrayList<Connection>();
-    ArrayList<SocketAddress> forwarders = new ArrayList<SocketAddress>();
+    ArrayList<InetAddress> forwarders = new ArrayList<InetAddress>();
     
 	/**
 	 * Constructor
@@ -42,46 +43,50 @@ public class Controller extends Node {
 			if (content.getType()==PacketContent.TLVPACKET) 
             {
                 String type = ((TLVPacket)content).getPacketT();
-                if(type.equals("7"))
+
+                if(type.equals(CON_FORWARDER))
                 {
-					if(forwarders.contains(packet.getSocketAddress()))
+					if(forwarders.contains(packet.getAddress()))
 					{
 						System.out.println("Forwarder already connected to controller");
 					}
 					else
 					{
-                    	System.out.println("Adding" + packet.getSocketAddress() + " to list of forwarders.");
-						forwarders.add(packet.getSocketAddress());
+                    	System.out.println("Adding" + packet.getAddress() + " to list of forwarders.");
+						forwarders.add(packet.getAddress());
 					}
+
                     DatagramPacket ack;
-                    ack= new TLVPacket("5", "3", "ACK").toDatagramPacket();
+					String val = T_MESSAGE + "3ACK";
+                    ack= new TLVPacket("1", "1", val).toDatagramPacket();
                     ack.setSocketAddress(packet.getSocketAddress());
                     socket.send(ack);
                 }
-                else if(type.equals("8"))
+                else if(type.equals(CON_ENDPOINT))
                 {
-					Connection toAdd = new Connection(((TLVPacket)content).getPacketEncoding(), packet.getSocketAddress());
-					if(inConnections(toAdd, connections))
+					HashMap<String,String> tlvs = ((TLVPacket)content).readEncoding();
+					Connection connect = new Connection(tlvs.get(T_CONTAINER), packet.getAddress());
+					
+					if(inConnections(connect, connections))
 					{
-						System.out.println("Connection already recorded by controller");
+						if(tlvs.containsKey(T_MESSAGE))
+						{
+							int removeID = removeID(connect, connections);
+							System.out.println("Removing connection between " + packet.getAddress() + " and " + tlvs.get(T_CONTAINER));
+							connections.remove(removeID);
+						}
+						else
+							System.out.println("Connection already recorded by controller, can't add.");
 					}
 					else
 					{
-						System.out.println("Adding connection between " + packet.getSocketAddress() + " and " + ((TLVPacket) content).getPacketEncoding());
-						connections.add(toAdd);
-					}
-                }
-                else if(type.equals("6"))
-                {
-					Connection toRemove = new Connection(((TLVPacket)content).getPacketEncoding(), packet.getSocketAddress());
-					if(!inConnections(toRemove, connections))
-					{
-						System.out.println("Connection was never in forwarding table.");
-					}
-					else
-					{
-						System.out.println("Removing connection between " + packet.getSocketAddress() + " and " + ((TLVPacket) content).getPacketEncoding());
-						connections.remove(toRemove);
+						if(tlvs.containsKey(T_PORT))
+						{
+							System.out.println("Adding connection between " + packet.getSocketAddress() + " and " + ((TLVPacket) content).getPacketEncoding());
+							connections.add(connect);
+						}
+						else	
+							System.out.println("Connection not in controllers table, can't delete.");
 					}
                 }
                 else
@@ -89,6 +94,10 @@ public class Controller extends Node {
                     System.out.println("Not expected receive.");
                 }
 				
+			}
+			else
+			{
+				System.out.println("WARNING: UNSUPPORTED PACKET TYPE");
 			}
 		}
 		catch(Exception e) {e.printStackTrace();}
@@ -113,6 +122,16 @@ public class Controller extends Node {
 				return true;
 		}
 		return false;
+	}
+
+	public static int removeID(Connection c, ArrayList<Connection> connections)
+	{
+		for(int i = 0; i < connections.size(); i++)
+		{
+			if(c.isEqual(connections.get(i)))
+				return i;
+		}
+		return -1;
 	}
 
 	/**

@@ -7,7 +7,6 @@ import java.util.HashMap;
  *
  */
 public class TLVPacket extends PacketContent {
-
     String t;
     String length;
     String encoding;
@@ -87,9 +86,9 @@ public class TLVPacket extends PacketContent {
 		return encoding;
 	}
 
-	public HashMap<Integer,String> readEncoding()
+	public HashMap<String,String> readEncoding()
 	{
-		HashMap<Integer,String> toReturn = new HashMap<Integer,String>();
+		HashMap<String,String> toReturn = new HashMap<String,String>();
 		int howMany = Integer.parseInt(this.length);
 		String encoding = this.encoding;
 
@@ -110,7 +109,7 @@ public class TLVPacket extends PacketContent {
 			}
 
 			String val = encoding.substring(beginIndex, beginIndex+length);
-			toReturn.put(type,val);
+			toReturn.put(Integer.toString(type),val);
 
 			if(i != howMany-1)
 				encoding = encoding.substring(beginIndex+length);

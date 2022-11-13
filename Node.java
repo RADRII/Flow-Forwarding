@@ -6,6 +6,20 @@ import java.util.concurrent.CountDownLatch;
 public abstract class Node {
 	static final int PACKETSIZE = 65536;
 
+	public static final String ACK_PACKET =  "1";
+	public static final String MESSAGE_PACKET =  "2";
+	public static final String CON_ENDPOINT =  "3";
+	public static final String CON_FORWARDER =  "4";
+	public static final String FLOW_CONTROL_RES =  "5";
+	public static final String FLOW_CONTROL_REQ =  "6";
+
+	public static final String T_MESSAGE = "1";
+	public static final String T_NETWORK = "2";
+	public static final String T_SENDER_NAME = "3";
+	public static final String T_PORT = "4";
+	public static final String T_DEST_NAME = "5";
+	public static final String T_CONTAINER = "6";
+
 	DatagramSocket socket;
 	Listener listener;
 	CountDownLatch latch;

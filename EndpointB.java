@@ -39,16 +39,16 @@ public class EndpointB extends Node
 			if (content.getType()==PacketContent.TLVPACKET) {
 
 				String type = ((TLVPacket)content).getPacketT();
-				if(type.equals("5")) //ack from forwarder
+				if(type.equals(ACK_PACKET))
 				{
 					workerTerminal.println("From Forwarder: " + ((TLVPacket)content).getPacketEncoding());
 					this.notify();
 				}
-				else if(type.equals("1")) //receiving message from somewhere
+				else if(type.equals(MESSAGE_PACKET)) //receiving message from somewhere
 				{
-					HashMap<Integer,String> tlvs = ((TLVPacket)content).readEncoding();
+					HashMap<String,String> tlvs = ((TLVPacket)content).readEncoding();
 
-					workerTerminal.println("From " + tlvs.get(7) + ": " + tlvs.get(5));
+					workerTerminal.println("From " + tlvs.get(T_SENDER_NAME) + ": " + tlvs.get(T_MESSAGE));
 					this.notify();
 				}
 			}
@@ -67,7 +67,8 @@ public class EndpointB extends Node
 			{
 				workerTerminal.println("Disconnecting from network");
 				DatagramPacket disconnect;
-				disconnect= new TLVPacket("1", "2", "43DIS64ENDB").toDatagramPacket();
+				String val = T_MESSAGE + "3DIS" + T_CONTAINER + "4ENDB";
+				disconnect= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
 				disconnect.setSocketAddress(dstAddress);
 				socket.send(disconnect);
 				this.wait();
@@ -77,7 +78,8 @@ public class EndpointB extends Node
 			{
 				workerTerminal.println("Connecting to this network's Forwarder");
 				DatagramPacket connectReceive;
-				connectReceive= new TLVPacket("1", "3", "43REC355000164ENDB").toDatagramPacket();
+				String val = T_PORT + "550001" + T_CONTAINER + "4ENDB";
+				connectReceive= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
 				connectReceive.setSocketAddress(dstAddress);
 				socket.send(connectReceive);
 
@@ -88,7 +90,8 @@ public class EndpointB extends Node
 			{
 				workerTerminal.println("Connecting to this network's Forwarder");
 				DatagramPacket connectSend;
-				connectSend= new TLVPacket("1", "2", "43SEN64ENDB").toDatagramPacket();
+				String val = T_MESSAGE + "3SEN" + T_CONTAINER + "4ENDB";
+				connectSend= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
 				connectSend.setSocketAddress(dstAddress);
 				socket.send(connectSend);
 
@@ -118,8 +121,8 @@ public class EndpointB extends Node
 				String messageLength = Integer.toString(message.length()); 
 
 				DatagramPacket messageSend;
-				String val = "5" + messageLength + message + "6" + containerLength + containerName + "74ENDB";
-				messageSend = new TLVPacket("1","3",val).toDatagramPacket();
+				val = T_MESSAGE + messageLength + message + T_DEST_NAME + containerLength + containerName + T_SENDER_NAME + "4ENDB";
+				messageSend = new TLVPacket(MESSAGE_PACKET,"3",val).toDatagramPacket();
 				messageSend.setSocketAddress(dstAddress);
 				socket.send(messageSend);
 

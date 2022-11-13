@@ -1,11 +1,11 @@
-import java.net.SocketAddress;
+import java.net.InetAddress;
 
 public class Connection
 {
     String endpointName;
-    SocketAddress forwarder;
+    InetAddress forwarder;
     
-    Connection(String endpointName, SocketAddress forwarder)
+    Connection(String endpointName, InetAddress forwarder)
     {
         this.endpointName = endpointName;
         this.forwarder = forwarder;
@@ -16,7 +16,7 @@ public class Connection
         return endpointName;
     }
 
-    public SocketAddress getForwarder()
+    public InetAddress getForwarder()
     {
         return forwarder;
     }
