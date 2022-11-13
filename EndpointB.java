@@ -37,16 +37,16 @@ public class EndpointB extends Node
 			PacketContent content= PacketContent.fromDatagramPacket(packet);
 
 			if (content.getType()==PacketContent.TLVPACKET) {
-
 				String type = ((TLVPacket)content).getPacketT();
+				HashMap<String,String> tlvs = ((TLVPacket)content).readEncoding();
+
 				if(type.equals(ACK_PACKET))
 				{
-					workerTerminal.println("From Forwarder: " + ((TLVPacket)content).getPacketEncoding());
+					workerTerminal.println("From Forwarder: " + tlvs.get(T_MESSAGE));
 					this.notify();
 				}
 				else if(type.equals(MESSAGE_PACKET)) //receiving message from somewhere
 				{
-					HashMap<String,String> tlvs = ((TLVPacket)content).readEncoding();
 
 					workerTerminal.println("From " + tlvs.get(T_SENDER_NAME) + ": " + tlvs.get(T_MESSAGE));
 					this.notify();

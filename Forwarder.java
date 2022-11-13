@@ -50,14 +50,14 @@ public class Forwarder extends Node {
 			if (content.getType()==PacketContent.TLVPACKET) {
 
 				String type = ((TLVPacket)content).getPacketT();
+                HashMap<String,String> tlvs = ((TLVPacket)content).readEncoding();
 
 				if(type.equals(ACK_PACKET))
 				{
-					System.out.println("From Controller: " + ((TLVPacket)content).getPacketEncoding());
+					System.out.println("From Controller: " + tlvs.get(T_MESSAGE));
 				}
                 else if(type.equals(CON_ENDPOINT))
                 {
-                    HashMap<String,String> tlvs = ((TLVPacket)content).readEncoding();
                     if(tlvs.containsKey(T_PORT))
                     {
                         System.out.println("Adding " + tlvs.get(T_CONTAINER) + " to forwarding table of forwarder");
@@ -96,8 +96,6 @@ public class Forwarder extends Node {
                 }
                 else if(type.equals(MESSAGE_PACKET))
                 {
-                    HashMap<String,String> tlvs = ((TLVPacket)content).readEncoding();
-
                     if(forwardingTable.containsKey(tlvs.get(T_DEST_NAME)))
                         {
                             System.out.println("Destination found in forwarding table - Sending packet.");
