@@ -125,7 +125,7 @@ public class EndpointA extends Node
 				messageSend.setSocketAddress(dstAddress);
 				socket.send(messageSend);
 
-				this.wait(10000);
+				this.wait(5000);
 			}
 			else
 			{
@@ -142,7 +142,12 @@ public class EndpointA extends Node
 		{
 			Integer type =  Character.getNumericValue(encoding.charAt(0));
 			Integer length =  Character.getNumericValue(encoding.charAt(1));
-			String val = encoding.substring(2,2+length);
+
+			String val;
+			if(2+length > encoding.length())
+				val = encoding.substring(2);
+			else
+				val = encoding.substring(2,2+length);
 
 			toReturn.put(type,val);
 

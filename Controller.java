@@ -62,7 +62,7 @@ public class Controller extends Node {
                 else if(type.equals("8"))
                 {
 					Connection toAdd = new Connection(((TLVPacket)content).getPacketEncoding(), packet.getSocketAddress());
-					if(connections.contains(toAdd))
+					if(inConnections(toAdd, connections))
 					{
 						System.out.println("Connection already recorded by controller");
 					}
@@ -74,9 +74,16 @@ public class Controller extends Node {
                 }
                 else if(type.equals("6"))
                 {
-                    System.out.println("Removing connection between " + packet.getSocketAddress() + " and " + ((TLVPacket) content).getPacketEncoding());
-                    Connection toAdd = new Connection(((TLVPacket)content).getPacketEncoding(), packet.getSocketAddress());
-                    connections.remove(toAdd);
+					Connection toRemove = new Connection(((TLVPacket)content).getPacketEncoding(), packet.getSocketAddress());
+					if(!inConnections(toRemove, connections))
+					{
+						System.out.println("Connection was never in forwarding table.");
+					}
+					else
+					{
+						System.out.println("Removing connection between " + packet.getSocketAddress() + " and " + ((TLVPacket) content).getPacketEncoding());
+						connections.remove(toRemove);
+					}
                 }
                 else
                 {
@@ -99,7 +106,17 @@ public class Controller extends Node {
 		this.wait();
 	}
 
-    public static HashMap<Integer,String> readEncoding(int howMany, String encoding)
+	public static boolean inConnections(Connection c, ArrayList<Connection> connections)
+	{
+		for(int i = 0; i < connections.size(); i++)
+		{
+			if(c.isEqual(connections.get(i)))
+				return true;
+		}
+		return false;
+	}
+
+	public static HashMap<Integer,String> readEncoding(int howMany, String encoding)
 	{
 		HashMap<Integer,String> toReturn = new HashMap<Integer,String>();
 
@@ -107,7 +124,12 @@ public class Controller extends Node {
 		{
 			Integer type =  Character.getNumericValue(encoding.charAt(0));
 			Integer length =  Character.getNumericValue(encoding.charAt(1));
-			String val = encoding.substring(2,2+length);
+
+			String val;
+			if(2+length > encoding.length())
+				val = encoding.substring(2);
+			else
+				val = encoding.substring(2,2+length);
 
 			toReturn.put(type,val);
 

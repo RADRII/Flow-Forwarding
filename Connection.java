@@ -20,4 +20,11 @@ public class Connection
     {
         return forwarder;
     }
+
+    public boolean isEqual(Connection c)
+    {
+        if(this.endpointName.equalsIgnoreCase(c.getEndpoint()) && this.forwarder.equals(c.getForwarder()))
+            return true;
+        return false;
+    }
 }
