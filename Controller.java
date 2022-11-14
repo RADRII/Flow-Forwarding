@@ -1,5 +1,4 @@
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.DatagramPacket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,7 +14,7 @@ public class Controller extends Node {
 	static final int DEFAULT_SRC_PORT = 50000;
 
     ArrayList<Connection> connections = new ArrayList<Connection>();
-    ArrayList<InetAddress> forwarders = new ArrayList<InetAddress>();
+    ArrayList<String> forwarders = new ArrayList<String>();
     
 	/**
 	 * Constructor
@@ -39,6 +38,7 @@ public class Controller extends Node {
 			System.out.println("Received packet");
 
 			PacketContent content= PacketContent.fromDatagramPacket(packet);
+			HashMap<String,String> tlvs = ((TLVPacket)content).readEncoding();
 
 			if (content.getType()==PacketContent.TLVPACKET) 
             {
@@ -46,14 +46,14 @@ public class Controller extends Node {
 
                 if(type.equals(CON_FORWARDER))
                 {
-					if(forwarders.contains(packet.getAddress()))
+					if(forwarders.contains(tlvs.get(T_CONTAINER)))
 					{
 						System.out.println("Forwarder already connected to controller");
 					}
 					else
 					{
-                    	System.out.println("Adding" + packet.getAddress() + " to list of forwarders.");
-						forwarders.add(packet.getAddress());
+                    	System.out.println("Adding" + tlvs.get(T_CONTAINER) + " to list of forwarders.");
+						forwarders.add(tlvs.get(T_CONTAINER));
 					}
 
                     DatagramPacket ack;
@@ -64,7 +64,6 @@ public class Controller extends Node {
                 }
                 else if(type.equals(CON_ENDPOINT))
                 {
-					HashMap<String,String> tlvs = ((TLVPacket)content).readEncoding();
 					Connection connect = new Connection(tlvs.get(T_CONTAINER), packet.getAddress());
 					
 					if(inConnections(connect, connections))

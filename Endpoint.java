@@ -1,5 +1,4 @@
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.util.HashMap;
@@ -12,8 +11,6 @@ public class Endpoint extends Node
 
     InetSocketAddress dstAddress;
 	Terminal endpointTerminal;
-    String containerAlias;
-    String aliasLength;
 
     /**
 	 * Constructor
@@ -22,9 +19,6 @@ public class Endpoint extends Node
 	 */
 	Endpoint(Terminal t, String dstHost, int dstPort, int srcPort) {
 		try {
-            containerAlias = InetAddress.getLocalHost().getHostName();
-            aliasLength = Integer.toString(containerAlias.length());
-
 			endpointTerminal = t;
 			dstAddress= new InetSocketAddress(dstHost, dstPort);
 			socket= new DatagramSocket(srcPort);

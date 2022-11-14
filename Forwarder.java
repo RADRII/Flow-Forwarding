@@ -142,7 +142,7 @@ public class Forwarder extends Node {
 		//Connect to Controller
         System.out.println("Connecting to Controller");
         DatagramPacket connectSend;
-        String val =  T_MESSAGE + "3CON";
+        String val =  T_CONTAINER + aliasLength + containerAlias;
         connectSend= new TLVPacket(CON_FORWARDER, "1", val).toDatagramPacket();
         connectSend.setSocketAddress(dstAddress);
         socket.send(connectSend);

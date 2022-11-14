@@ -1,5 +1,6 @@
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
+import java.net.InetAddress;
 import java.net.SocketException;
 import java.util.concurrent.CountDownLatch;
 
@@ -24,11 +25,20 @@ public abstract class Node {
 	Listener listener;
 	CountDownLatch latch;
 
+	String containerAlias;
+    String aliasLength;
+
 	Node() {
-		latch= new CountDownLatch(1);
-		listener= new Listener();
-		listener.setDaemon(true);
-		listener.start();
+		try{
+			containerAlias = InetAddress.getLocalHost().getHostName();
+			aliasLength = Integer.toString(containerAlias.length());
+			
+			latch= new CountDownLatch(1);
+			listener= new Listener();
+			listener.setDaemon(true);
+			listener.start();
+		}
+		catch(java.lang.Exception e) {e.printStackTrace();}
 	}
 
 
