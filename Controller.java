@@ -1,4 +1,6 @@
 import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.net.DatagramPacket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -58,7 +60,7 @@ public class Controller extends Node {
 
                     DatagramPacket ack;
 					String val = T_MESSAGE + "3ACK";
-                    ack= new TLVPacket("1", "1", val).toDatagramPacket();
+                    ack= new TLVPacket(ACK_PACKET, "1", val).toDatagramPacket();
                     ack.setSocketAddress(packet.getSocketAddress());
                     socket.send(ack);
                 }
@@ -88,6 +90,27 @@ public class Controller extends Node {
 							System.out.println("Connection not in controllers table, can't delete.");
 					}
                 }
+				else if(type.equals(FORWARDER_LIST_REQ))
+				{
+					System.out.println(tlvs.get(T_CONTAINER) + " requesting relvent forwarders.");
+					//taking ip address of endpoint and subtracting the last two digits to get network ip
+					String ip = packet.getAddress().toString();
+					ip = ip.substring(0,ip.length()-2);
+
+					//getting all forwarders that have the same base ip
+					ArrayList<String> forwarderOnIP = getForwardersOnIP(ip);
+					System.out.println("Found " + forwarderOnIP.size() + " relavent forwarders, sending names.");
+
+					DatagramPacket forwarderList;
+					String val = "";
+					for(int i = 0; i < forwarderOnIP.size(); i++)
+					{
+						val = val + T_CONTAINER + Integer.toString(forwarderOnIP.get(i).length()) + forwarderOnIP.get(i);
+					}
+                    forwarderList= new TLVPacket(FORWARDER_LIST, Integer.toString(forwarderOnIP.size()), val).toDatagramPacket();
+                    forwarderList.setSocketAddress(packet.getSocketAddress());
+                    socket.send(forwarderList);
+				}
                 else
                 {
                     System.out.println("Not expected receive.");
@@ -111,6 +134,28 @@ public class Controller extends Node {
     {
         System.out.println("~Waiting for Contact~");
 		this.wait();
+	}
+
+	public synchronized ArrayList<String> getForwardersOnIP(String epID)
+	{
+		ArrayList<String> toReturn = new ArrayList<String>();
+		for(int i = 0; i < forwarders.size(); i++)
+		{
+			InetAddress[] ips;
+			try {
+				ips = InetAddress.getAllByName(forwarders.get(i));
+
+				for(int j = 0; j < ips.length; j++)
+				{
+					String ip = ips[j].getHostAddress();
+					ip = ip.substring(0, ip.length()-2);
+					if(!toReturn.contains(forwarders.get(i)) && ip.equals(epID))
+						toReturn.add(forwarders.get(i));
+				}
+			} 
+			catch (UnknownHostException e) {e.printStackTrace();}
+		}
+		return toReturn;
 	}
 
 	public static boolean inConnections(Connection c, ArrayList<Connection> connections)

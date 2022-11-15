@@ -6,11 +6,14 @@ import java.util.HashMap;
 
 public class Endpoint extends Node
 {
-	static final int DEFAULT_DST_PORT = 50000;
+	static final int CONTROLLER_DST_PORT = 50000;
+    static final int FORWARDER_DST_PORT = 54321;
     static final String DEFAULT_DST_NODE = "controller";
+    static final String DEFAULT_FORWARDER_NODE = "forwarderone";
     static int DEFAULT_SRC_PORT;
 
-    InetSocketAddress dstAddress;
+    InetSocketAddress controllerAddress;
+    InetSocketAddress defaultForwarderAddress = null;
 	Terminal endpointTerminal;
     ArrayList<String> forwarders = new ArrayList<String>();
 
@@ -30,7 +33,7 @@ public class Endpoint extends Node
                 DEFAULT_SRC_PORT = 50003;
 
 			endpointTerminal = t;
-			dstAddress= new InetSocketAddress(dstHost, dstPort);
+			controllerAddress= new InetSocketAddress(dstHost, dstPort);
 			socket= new DatagramSocket(srcPort);
 			listener.go();
 		}
@@ -61,6 +64,12 @@ public class Endpoint extends Node
 					endpointTerminal.println("From " + tlvs.get(T_SENDER_NAME) + ": " + tlvs.get(T_MESSAGE));
 					this.notify();
 				}
+                else if(type.equals(FORWARDER_LIST))
+                {
+                    endpointTerminal.println("Updating Forwarding List");
+                    ArrayList<String> forwardersReceived = ((TLVPacket)content).readEncodingList();
+                    forwarders = forwardersReceived;
+                }
 			}
 		}
 		catch(Exception e) {e.printStackTrace();}
@@ -68,6 +77,23 @@ public class Endpoint extends Node
 
     public synchronized void start() throws Exception {
 		endpointTerminal.println("Welcome!");
+        //Setup Forwarders
+        endpointTerminal.println("Asking controller for forwarders on this network.");
+        DatagramPacket reqForwarders;
+        String value = T_CONTAINER + aliasLength + containerAlias;
+        reqForwarders= new TLVPacket(FORWARDER_LIST_REQ, "1", value).toDatagramPacket();
+        reqForwarders.setSocketAddress(controllerAddress);
+        socket.send(reqForwarders);
+        this.wait();
+
+        endpointTerminal.println("Setup complete, ready for User");
+
+        if(forwarders.size() < 1)
+            defaultForwarderAddress = new InetSocketAddress(DEFAULT_FORWARDER_NODE, FORWARDER_DST_PORT);
+        else
+            defaultForwarderAddress = new InetSocketAddress(forwarders.get(0), FORWARDER_DST_PORT);
+        
+        //Start User Interaction
 		while (true) 
 		{
 			endpointTerminal.println("Type 'receive' to receive packets, 'send' to send, 'quit' to quit.");
@@ -79,30 +105,35 @@ public class Endpoint extends Node
 				DatagramPacket disconnect;
 				String val = T_MESSAGE + "3DIS" + T_CONTAINER + aliasLength + containerAlias;
 				disconnect= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
-				disconnect.setSocketAddress(dstAddress);
+				disconnect.setSocketAddress(defaultForwarderAddress);
 				socket.send(disconnect);
 				this.wait();
 				System.exit(0);
 			}
 			else if(userInput != null && userInput.equals("receive"))
 			{
-				endpointTerminal.println("Connecting to this network's Forwarder");
+				endpointTerminal.println("Connecting to this network's Forwarder/s");
 				DatagramPacket connectReceive;
 				String val = T_PORT + "550001" + T_CONTAINER + aliasLength + containerAlias;
 				connectReceive= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
-				connectReceive.setSocketAddress(dstAddress);
-				socket.send(connectReceive);
+
+                for(int i = 0; i < forwarders.size(); i++)
+                {
+                    InetSocketAddress sendTo = new InetSocketAddress(forwarders.get(i), FORWARDER_DST_PORT);
+                    connectReceive.setSocketAddress(sendTo);
+                    socket.send(connectReceive);
+                }
 
 				this.wait();
 				this.wait();
 			}
 			else if(userInput != null && userInput.equals("send"))
 			{
-				endpointTerminal.println("Connecting to this network's Forwarder");
+				endpointTerminal.println("Connecting to a Forwarder");
 				DatagramPacket connectSend;
 				String val = T_MESSAGE + "3SEN" + T_CONTAINER + aliasLength + containerAlias;
 				connectSend= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
-				connectSend.setSocketAddress(dstAddress);
+				connectSend.setSocketAddress(defaultForwarderAddress);
 				socket.send(connectSend);
 
 				this.wait();
@@ -133,7 +164,7 @@ public class Endpoint extends Node
 				DatagramPacket messageSend;
 				val = T_MESSAGE + messageLength + message + T_DEST_NAME + containerLength + containerName + T_SENDER_NAME + aliasLength + containerAlias;
 				messageSend = new TLVPacket(MESSAGE_PACKET,"3",val).toDatagramPacket();
-				messageSend.setSocketAddress(dstAddress);
+				messageSend.setSocketAddress(defaultForwarderAddress);
 				socket.send(messageSend);
 
 				this.wait(5000);
@@ -148,7 +179,7 @@ public class Endpoint extends Node
     public static void main(String[] args) {
 		try {
 			Terminal endpointTerminal = new Terminal("Endpoint");
-			(new Endpoint(endpointTerminal, DEFAULT_DST_NODE, DEFAULT_DST_PORT, DEFAULT_SRC_PORT)).start();
+			(new Endpoint(endpointTerminal, DEFAULT_DST_NODE, CONTROLLER_DST_PORT, DEFAULT_SRC_PORT)).start();
 			endpointTerminal.println("Program completed");
 		} catch(java.lang.Exception e) {e.printStackTrace();}
 	}

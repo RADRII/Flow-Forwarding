@@ -13,6 +13,8 @@ public abstract class Node {
 	public static final String CON_FORWARDER =  "4";
 	public static final String FLOW_CONTROL_RES =  "5";
 	public static final String FLOW_CONTROL_REQ =  "6";
+	public static final String FORWARDER_LIST = "7";
+	public static final String FORWARDER_LIST_REQ = "8";
 
 	public static final String T_MESSAGE = "1";
 	public static final String T_NETWORK = "2";
