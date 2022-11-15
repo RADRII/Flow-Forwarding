@@ -1,16 +1,18 @@
 import java.net.DatagramSocket;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 public class Endpoint extends Node
 {
-    static final int DEFAULT_SRC_PORT = 50001;
-	static final int DEFAULT_DST_PORT = 54321;
-    static final String DEFAULT_DST_NODE = "forwarderone";
+	static final int DEFAULT_DST_PORT = 50000;
+    static final String DEFAULT_DST_NODE = "controller";
+    static int DEFAULT_SRC_PORT;
 
     InetSocketAddress dstAddress;
 	Terminal endpointTerminal;
+    ArrayList<String> forwarders = new ArrayList<String>();
 
     /**
 	 * Constructor
@@ -19,6 +21,14 @@ public class Endpoint extends Node
 	 */
 	Endpoint(Terminal t, String dstHost, int dstPort, int srcPort) {
 		try {
+            int lastChar = containerAlias.charAt((containerAlias.length()-1));;
+            if(lastChar == 'A')
+                DEFAULT_SRC_PORT = 50001;
+            else if(lastChar == 'B')
+                DEFAULT_SRC_PORT = 50002;
+            else
+                DEFAULT_SRC_PORT = 50003;
+
 			endpointTerminal = t;
 			dstAddress= new InetSocketAddress(dstHost, dstPort);
 			socket= new DatagramSocket(srcPort);
