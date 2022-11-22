@@ -37,6 +37,19 @@ public class Connections
         return list.get(index).getConnections();
     }
 
+    public void removeAllByConnection(String connected)
+    {
+        for(int i = 0; i < list.size(); i++)
+        {
+            int index = list.get(i).isConnectedTo(connected);
+            if(index != -1)
+            {
+                System.out.println("Removing connection between " + list.get(i).getOrigin() + " and " + connected);
+                list.get(i).removeConnection(connected);
+            }
+        }
+    }
+
     public void addConnection(String origin, String connectedTo)
     {
         int index = this.contains(origin);

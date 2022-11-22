@@ -82,8 +82,7 @@ public class Controller extends Node {
 
 					if(forwarderIndex != -1 && !tlvs.containsKey(T_PORT))
 					{
-						System.out.println("Removing connection between " + forwarderName + " and " + tlvs.get(T_CONTAINER));
-						forwardersE.removeConnection(forwarderName, tlvs.get(T_CONTAINER));
+						forwardersE.removeAllByConnection(tlvs.get(T_CONTAINER));
 					}
 					else if(tlvs.containsKey(T_PORT))
 					{
