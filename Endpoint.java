@@ -122,9 +122,10 @@ public class Endpoint extends Node
                     InetSocketAddress sendTo = new InetSocketAddress(forwarders.get(i), FORWARDER_DST_PORT);
                     connectReceive.setSocketAddress(sendTo);
                     socket.send(connectReceive);
+
+					this.wait();
                 }
 
-				this.wait();
 				this.wait();
 			}
 			else if(userInput != null && userInput.equals("send"))

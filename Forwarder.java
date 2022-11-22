@@ -2,7 +2,10 @@ import java.net.DatagramSocket;
 import java.net.InetAddress;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.HashMap;
 
 /**
@@ -143,7 +146,22 @@ public class Forwarder extends Node {
         System.out.println("Connecting to Controller");
         DatagramPacket connectSend;
         String val =  T_CONTAINER + aliasLength + containerAlias;
-        connectSend= new TLVPacket(CON_FORWARDER, "1", val).toDatagramPacket();
+        int length = 1;
+
+        Enumeration<NetworkInterface> nets = NetworkInterface.getNetworkInterfaces();
+        for (NetworkInterface netint : Collections.list(nets))
+        {
+            Enumeration<InetAddress> inetAddresses = netint.getInetAddresses();
+            for (InetAddress inetAddress : Collections.list(inetAddresses)) {
+                String address = inetAddress.toString();
+                address = address.substring(0, address.length()-2);
+                val = val + T_NETWORK + Integer.toString(address.length()) + address;
+
+                length++;
+            }
+        }
+
+        connectSend= new TLVPacket(CON_FORWARDER, Integer.toString(length), val).toDatagramPacket();
         connectSend.setSocketAddress(dstAddress);
         socket.send(connectSend);
 

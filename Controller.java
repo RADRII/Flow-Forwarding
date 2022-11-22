@@ -1,6 +1,4 @@
 import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.net.DatagramPacket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,8 +13,8 @@ import java.util.HashMap;
 public class Controller extends Node {
 	static final int DEFAULT_SRC_PORT = 50000;
 
-    ArrayList<Connection> connections = new ArrayList<Connection>();
-    ArrayList<String> forwarders = new ArrayList<String>();
+    Connections forwardersE = new Connections();
+	Connections networksF = new Connections();
     
 	/**
 	 * Constructor
@@ -48,14 +46,25 @@ public class Controller extends Node {
 
                 if(type.equals(CON_FORWARDER))
                 {
-					if(forwarders.contains(tlvs.get(T_CONTAINER)))
+					int length = Integer.parseInt(((TLVPacket)content).getPacketLength());
+					String encoding = ((TLVPacket)content).getPacketEncoding();
+					String forwarderName = encoding.substring(2, 2+Character.getNumericValue(encoding.charAt(1)));
+					encoding = encoding.substring(2+Character.getNumericValue(encoding.charAt(1)));
+
+					for(int i = 0; i < length-1; i++)
 					{
-						System.out.println("Forwarder already connected to controller");
-					}
-					else
-					{
-                    	System.out.println("Adding" + tlvs.get(T_CONTAINER) + " to list of forwarders.");
-						forwarders.add(tlvs.get(T_CONTAINER));
+						Integer l =  Character.getNumericValue(encoding.charAt(1));
+						int beginIndex = 2;
+
+						if(l == 0)
+							break;
+
+						String network = encoding.substring(beginIndex, beginIndex+l);
+
+						networksF.addConnection(network,forwarderName);
+
+						if(i != length-1)
+							encoding = encoding.substring(beginIndex+l);
 					}
 
                     DatagramPacket ack;
@@ -66,28 +75,23 @@ public class Controller extends Node {
                 }
                 else if(type.equals(CON_ENDPOINT))
                 {
-					Connection connect = new Connection(tlvs.get(T_CONTAINER), packet.getAddress());
-					
-					if(inConnections(connect, connections))
+					int forwarderIndex = forwardersE.contains(tlvs.get(T_CONTAINER));
+
+					if(forwarderIndex != -1 && !tlvs.containsKey(T_PORT))
 					{
-						if(tlvs.containsKey(T_MESSAGE))
-						{
-							int removeID = removeID(connect, connections);
-							System.out.println("Removing connection between " + packet.getAddress() + " and " + tlvs.get(T_CONTAINER));
-							connections.remove(removeID);
-						}
-						else
-							System.out.println("Connection already recorded by controller, can't add.");
+						String forwarderName = packet.getAddress().getHostName();
+						System.out.println("Removing connection between " + forwarderName + " and " + tlvs.get(T_CONTAINER));
+						forwardersE.removeConnection(forwarderName, tlvs.get(T_CONTAINER));
+					}
+					else if(tlvs.containsKey(T_PORT))
+					{
+						String forwarderName = packet.getAddress().getHostName();
+						System.out.println("Adding connection between " + forwarderName + " and " + tlvs.get(T_CONTAINER));
+						forwardersE.addConnection(forwarderName,tlvs.get(T_CONTAINER));
 					}
 					else
 					{
-						if(tlvs.containsKey(T_PORT))
-						{
-							System.out.println("Adding connection between " + packet.getSocketAddress() + " and " + tlvs.get(T_CONTAINER));
-							connections.add(connect);
-						}
-						else	
-							System.out.println("Connection not in controllers table, can't delete.");
+						System.out.println("WARNING: Faulty table request");
 					}
                 }
 				else if(type.equals(FORWARDER_LIST_REQ))
@@ -138,44 +142,15 @@ public class Controller extends Node {
 
 	public synchronized ArrayList<String> getForwardersOnIP(String epID)
 	{
-		ArrayList<String> toReturn = new ArrayList<String>();
-		for(int i = 0; i < forwarders.size(); i++)
-		{
-			InetAddress[] ips;
-			try {
-				ips = InetAddress.getAllByName(forwarders.get(i));
+		int netIndex = networksF.contains(epID);
 
-				for(int j = 0; j < ips.length; j++)
-				{
-					String ip = ips[j].getHostAddress();
-					ip = ip.substring(0, ip.length()-2);
-					if(!toReturn.contains(forwarders.get(i)) && ip.equals(epID))
-						toReturn.add(forwarders.get(i));
-				}
-			} 
-			catch (UnknownHostException e) {e.printStackTrace();}
-		}
-		return toReturn;
-	}
-
-	public static boolean inConnections(Connection c, ArrayList<Connection> connections)
-	{
-		for(int i = 0; i < connections.size(); i++)
+		if(netIndex == -1)
 		{
-			if(c.isEqual(connections.get(i)))
-				return true;
+			System.out.println("WARNING: " + epID + " had no forwarders.");
+			return new ArrayList<String>();
 		}
-		return false;
-	}
 
-	public static int removeID(Connection c, ArrayList<Connection> connections)
-	{
-		for(int i = 0; i < connections.size(); i++)
-		{
-			if(c.isEqual(connections.get(i)))
-				return i;
-		}
-		return -1;
+		return networksF.getAllByOrigin(epID);
 	}
 
 	/**
