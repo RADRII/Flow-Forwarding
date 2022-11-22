@@ -180,8 +180,17 @@ public class Forwarder extends Node {
                     hops = hops.substring(1+length);
                     //Getting name of next hop and removing from encoding
                     Integer hopNameL = Character.getNumericValue(hops.charAt(1));
-                    String hopName = hops.substring(2,2+hopNameL);
-                    hops = hops.substring(1+hopNameL);
+                    String hopName;
+                    if(2+hopNameL > hops.length())
+                    {
+                        hopName = hops.substring(2);
+                        hops = "";
+                    }
+                    else
+                    {
+                        hopName = hops.substring(2, 2+hopNameL);
+                        hops = hops.substring(2+hopNameL);
+                    }
 
                     //need to declare final because java was complaining
                     final String trueHops = hops;
