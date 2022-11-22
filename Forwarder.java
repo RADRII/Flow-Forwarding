@@ -122,7 +122,6 @@ public class Forwarder extends Node {
                         }
                     else if(tlvs.containsKey(T_CONTAINER))
                     {
-                        System.out.println("Hop encoded in message, forwarding packet.");
                         ArrayList<String> encodings = ((TLVPacket)content).readEncodingList();
                         String hopName = encodings.get(3);
 
@@ -148,6 +147,8 @@ public class Forwarder extends Node {
                                 val = val + T_CONTAINER + Integer.toString(currentV.length()) + currentV;
                             }
                         }
+
+                        System.out.println("Hop encoded in message, forwarding packet via " + hopName);
 
                         DatagramPacket forwardMessage;
                         Integer l = Integer.parseInt(((TLVPacket)content).getPacketLength()) - 1;
@@ -177,7 +178,7 @@ public class Forwarder extends Node {
                     String hops = ((TLVPacket)content).getPacketEncoding(); 
                     Integer length =  Character.getNumericValue(hops.charAt(1));
                     //removing destination name from hops encoding
-                    hops = hops.substring(1+length);
+                    hops = hops.substring(2+length);
                     //Getting name of next hop and removing from encoding
                     Integer hopNameL = Character.getNumericValue(hops.charAt(1));
                     String hopName;
@@ -200,12 +201,14 @@ public class Forwarder extends Node {
                         if(dest.equals(tlvs.get(T_DEST_NAME)))
                         {
                             PacketContent toModify = PacketContent.fromDatagramPacket(datagram);
+                            HashMap<String,String> mod = ((TLVPacket)toModify).readEncoding();
 
                             DatagramPacket forwardMessage;
                             String val = ((TLVPacket)toModify).getPacketEncoding() + trueHops;
-                            Integer l = Integer.parseInt(((TLVPacket)toModify).getPacketLength()) + Integer.parseInt(((TLVPacket)content).getPacketLength()) - 1;
+                            Integer l = Integer.parseInt(((TLVPacket)toModify).getPacketLength()) + Integer.parseInt(((TLVPacket)content).getPacketLength()) - 2;
                             forwardMessage = new TLVPacket(MESSAGE_PACKET, Integer.toString(l), val).toDatagramPacket();
 
+                            System.out.println("Forwarding message " + mod.get(T_MESSAGE) + " from " + mod.get(T_SENDER_NAME) + " via " + hopName);
                             InetSocketAddress forwarderAddress = new InetSocketAddress(hopName, DEFAULT_SRC_PORT);
                             forwardMessage.setSocketAddress(forwarderAddress);
 
