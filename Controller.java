@@ -127,12 +127,11 @@ public class Controller extends Node {
 					if(hops.size() <= 1)
 					{
 						//TODO ADD FUTURE CHECKS WHEN NEW EDNPOINTS ADDED
-						System.out.println(tlvs.get(T_DEST_NAME) + " not in flow table.");
-						String val = T_MESSAGE + "3NAH";
-						flowRes= new TLVPacket(FLOW_CONTROL_RES, "1", val).toDatagramPacket();
+						System.out.println(tlvs.get(T_DEST_NAME) + " not in flow table. Packet Dropped.");
 					}
 					else
 					{
+						System.out.println(tlvs.get(T_DEST_NAME) + " found in flow table, sending hops.");
 						int length = 1;
 						String val = T_DEST_NAME + Integer.toString(tlvs.get(T_DEST_NAME).length()) + tlvs.get(T_DEST_NAME);
 						for(int i = 0; i < hops.size(); i++)
@@ -142,10 +141,9 @@ public class Controller extends Node {
 							length++;
 						}
 						flowRes= new TLVPacket(FLOW_CONTROL_RES, Integer.toString(length), val).toDatagramPacket();
+						flowRes.setSocketAddress(packet.getSocketAddress());
+						socket.send(flowRes);
 					}
-
-					flowRes.setSocketAddress(packet.getSocketAddress());
-					socket.send(flowRes);
                 }
                 else
                 {

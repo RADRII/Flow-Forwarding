@@ -1,5 +1,6 @@
 import java.net.DatagramSocket;
 import java.net.InetAddress;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
@@ -133,8 +134,41 @@ public class Forwarder extends Node {
                 }
                 else if(type.equals(FLOW_CONTROL_RES))
                 {
-                    System.out.println("Looking for " + tlvs.get(T_DEST_NAME) + " in forwarding table.");
-                    //TODO
+                    System.out.println("Received path for " + tlvs.get(T_DEST_NAME));
+
+                    String hops = ((TLVPacket)content).getPacketEncoding(); 
+                    Integer length =  Character.getNumericValue(hops.charAt(1));
+                    //removing destination name from hops encoding
+                    hops = hops.substring(1+length);
+                    //Getting name of next hop and removing from encoding
+                    Integer hopNameL = Character.getNumericValue(hops.charAt(1));
+                    String hopName = hops.substring(2,2+hopNameL);
+                    hops = hops.substring(1+hopNameL);
+
+                    //need to declare final because java was complaining
+                    final String trueHops = hops;
+
+                    droppedPackets.forEach((datagram, dest) -> 
+                    {
+                        if(dest.equals(tlvs.get(T_DEST_NAME)))
+                        {
+                            PacketContent toModify = PacketContent.fromDatagramPacket(datagram);
+
+                            DatagramPacket forwardMessage;
+                            String val = ((TLVPacket)toModify).getPacketEncoding() + trueHops;
+                            Integer l = Integer.parseInt(((TLVPacket)toModify).getPacketLength()) + Integer.parseInt(((TLVPacket)content).getPacketLength()) - 1;
+                            forwardMessage= new TLVPacket(MESSAGE_PACKET, Integer.toString(l), val).toDatagramPacket();
+
+                            InetSocketAddress forwarderAddress = new InetSocketAddress(hopName, DEFAULT_SRC_PORT);
+                            forwardMessage.setSocketAddress(forwarderAddress);
+
+                            try {
+                                socket.send(forwardMessage);
+                            } catch (IOException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                    });
                 }
                 else
                 {
