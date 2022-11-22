@@ -7,6 +7,7 @@ import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 
+
 /**
  *
  * Forwarder class
@@ -21,8 +22,7 @@ public class Forwarder extends Node {
 	InetSocketAddress dstAddress;
 
     HashMap<String, String> forwardingTable = new HashMap<String, String>();
-    HashMap<Integer, DatagramPacket> droppedPackets = new HashMap<Integer, DatagramPacket>();
-    int packetKey = 0;
+    HashMap<DatagramPacket, String> droppedPackets = new HashMap<DatagramPacket, String>();
     
 	/**
 	 * Constructor
@@ -121,8 +121,7 @@ public class Forwarder extends Node {
                         }
                         else
                         {
-                            droppedPackets.put(packetKey, packet);  
-                            packetKey++;
+                            droppedPackets.put(packet, tlvs.get(T_DEST_NAME));  
 
                             System.out.println(tlvs.get(T_DEST_NAME) + " not in this forwarders forwarding table, requesting path from controller.");
                             int destNameLength = tlvs.get(T_DEST_NAME).length();
@@ -131,6 +130,15 @@ public class Forwarder extends Node {
                             flowRequest.setSocketAddress(dstAddress);
                             socket.send(flowRequest);
                         }
+                }
+                else if(type.equals(FLOW_CONTROL_RES))
+                {
+                    System.out.println("Looking for " + tlvs.get(T_DEST_NAME) + " in forwarding table.");
+                    //TODO
+                }
+                else
+                {
+                    System.out.println("WARNING: PACKET TYPE NOT HANDLED BY FORWARDER");
                 }
             }
             else
