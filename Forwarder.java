@@ -3,7 +3,6 @@ import java.net.InetAddress;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -21,10 +20,9 @@ public class Forwarder extends Node {
 	static final String DEFAULT_DST_NODE = "controller";
 	InetSocketAddress dstAddress;
 
-    DatagramSocket socketTwo;
-
     HashMap<String, String> forwardingTable = new HashMap<String, String>();
-    ArrayList<DatagramPacket> droppedPackets = new ArrayList<DatagramPacket>();
+    HashMap<Integer, DatagramPacket> droppedPackets = new HashMap<Integer, DatagramPacket>();
+    int packetKey = 0;
     
 	/**
 	 * Constructor
@@ -123,10 +121,15 @@ public class Forwarder extends Node {
                         }
                         else
                         {
-                            //PACKETS ARE DROPPED FOR NOW
-                            //IMPLEMENT FLOWTABLE UPDATES LATER
-                            droppedPackets.add(packet);  
-                            System.out.println("NOT IN FORWARDING TABLE");
+                            droppedPackets.put(packetKey, packet);  
+                            packetKey++;
+
+                            System.out.println(tlvs.get(T_DEST_NAME) + " not in this forwarders forwarding table, requesting path from controller.");
+                            int destNameLength = tlvs.get(T_DEST_NAME).length();
+                            String val = T_DEST_NAME + destNameLength + tlvs.get(T_DEST_NAME) + T_CONTAINER + aliasLength + containerAlias;
+                            DatagramPacket flowRequest= new TLVPacket(FLOW_CONTROL_REQ, "2", val).toDatagramPacket();
+                            flowRequest.setSocketAddress(dstAddress);
+                            socket.send(flowRequest);
                         }
                 }
             }
