@@ -1,5 +1,6 @@
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 
 /**
@@ -110,6 +111,36 @@ public class TLVPacket extends PacketContent {
 
 			String val = encoding.substring(beginIndex, beginIndex+length);
 			toReturn.put(Integer.toString(type),val);
+
+			if(i != howMany-1)
+				encoding = encoding.substring(beginIndex+length);
+		}
+		return toReturn;
+	}
+
+	public ArrayList<String> readEncodingList()
+	{
+		ArrayList<String> toReturn = new ArrayList<String>();
+		int howMany = Integer.parseInt(this.length);
+		String encoding = this.encoding;
+
+		for(int i = 0; i < howMany; i++)
+		{
+			Integer length =  Character.getNumericValue(encoding.charAt(1));
+			int beginIndex = 2;
+
+			if(length == 0)
+				break;
+
+			int nextChar = Character.getNumericValue(encoding.charAt(beginIndex));
+			if(nextChar >= 0 && nextChar < 10)
+			{
+				length = (length * 10) + nextChar;
+				beginIndex++;
+			}
+
+			String val = encoding.substring(beginIndex, beginIndex+length);
+			toReturn.add(val);
 
 			if(i != howMany-1)
 				encoding = encoding.substring(beginIndex+length);
