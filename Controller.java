@@ -123,9 +123,9 @@ public class Controller extends Node {
 					getHops(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME), passed, hops);
 
 					DatagramPacket flowRes;
-					if(hops.size() <= 1)
+					if(hops.size() < 1)
 					{
-						//TODO ADD FUTURE CHECKS WHEN NEW EDNPOINTS ADDED
+						//todo ADD FUTURE CHECKS WHEN NEW EDNPOINTS ADDED
 						System.out.println(tlvs.get(T_DEST_NAME) + " not in flow table. Packet Dropped.");
 					}
 					else
