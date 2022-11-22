@@ -72,6 +72,10 @@ public class Endpoint extends Node
 
 					this.notify();
                 }
+				else
+				{
+					endpointTerminal.println("ERROR: Not expected Receive.");
+				}
 			}
 		}
 		catch(Exception e) {e.printStackTrace();}
@@ -119,7 +123,7 @@ public class Endpoint extends Node
 			{
 				endpointTerminal.println("Connecting to this network's Forwarder/s");
 				DatagramPacket connectReceive;
-				String val = T_PORT + "550001" + T_CONTAINER + aliasLength + containerAlias;
+				String val = T_PORT + "5" + Integer.toString(DEFAULT_SRC_PORT) + T_CONTAINER + aliasLength + containerAlias;
 				connectReceive= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
 
                 for(int i = 0; i < forwarders.size(); i++)
@@ -130,7 +134,7 @@ public class Endpoint extends Node
 
 					this.wait();
                 }
-
+				endpointTerminal.println("Connected, waiting for message.");
 				this.wait();
 			}
 			else if(userInput != null && userInput.equals("send"))
