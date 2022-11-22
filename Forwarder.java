@@ -155,9 +155,12 @@ public class Forwarder extends Node {
             for (InetAddress inetAddress : Collections.list(inetAddresses)) {
                 String address = inetAddress.toString();
                 address = address.substring(0, address.length()-2);
-                val = val + T_NETWORK + Integer.toString(address.length()) + address;
 
-                length++;
+                if(!address.equals(BRIDGE_NET_IP) && !address.equals(HOST_NET_IP))
+                {
+                    val = val + T_NETWORK + Integer.toString(address.length()) + address;
+                    length++;
+                }
             }
         }
 

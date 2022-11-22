@@ -51,6 +51,8 @@ public class Controller extends Node {
 					String forwarderName = encoding.substring(2, 2+Character.getNumericValue(encoding.charAt(1)));
 					encoding = encoding.substring(2+Character.getNumericValue(encoding.charAt(1)));
 
+					System.out.println(forwarderName + " is on " + (length-1) + " networks. Sending ACK");
+
 					for(int i = 0; i < length-1; i++)
 					{
 						Integer l =  Character.getNumericValue(encoding.charAt(1));
@@ -60,7 +62,7 @@ public class Controller extends Node {
 							break;
 
 						String network = encoding.substring(beginIndex, beginIndex+l);
-
+						System.out.println(network);
 						networksF.addConnection(network,forwarderName);
 
 						if(i != length-1)

@@ -7,6 +7,10 @@ import java.util.concurrent.CountDownLatch;
 public abstract class Node {
 	static final int PACKETSIZE = 65536;
 
+	//EDIT THESE NEXT TWO VARIABLES BASED ON DEVICE
+	public static final String BRIDGE_NET_IP = "/172.17.0";
+	public static final String HOST_NET_IP = "/127.0.0";
+
 	public static final String ACK_PACKET =  "1";
 	public static final String MESSAGE_PACKET =  "2";
 	public static final String CON_ENDPOINT =  "3";

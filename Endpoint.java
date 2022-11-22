@@ -89,7 +89,10 @@ public class Endpoint extends Node
         endpointTerminal.println("Setup complete, ready for User");
 
         if(forwarders.size() < 1)
-            defaultForwarderAddress = new InetSocketAddress(DEFAULT_FORWARDER_NODE, FORWARDER_DST_PORT);
+		{
+            System.out.println("ERROR: no forwarders on this endpoints network, please run all forwarders before endpoints.");
+			System.exit(0);
+		}
         else
             defaultForwarderAddress = new InetSocketAddress(forwarders.get(0), FORWARDER_DST_PORT);
         
