@@ -45,13 +45,13 @@ public class Connections
     public void removeConnection(String origin, String connectedTo)
     {
         int index = this.contains(origin);
-        if(index != -1)
+        if(index == -1)
         {
            System.out.println("WARNING: " + origin + " and " + connectedTo + " were never connected, cannot remove");
         }
         else
         {
-            list.remove(index);
+            list.get(index).removeConnection(connectedTo);
         }
     }
 }
@@ -88,7 +88,8 @@ class Connection
 
     public void removeConnection(String connection)
     {
-        forwardersOrEndpoints.remove(connection);
+        if(this.isConnectedTo(connection) != -1)
+            forwardersOrEndpoints.remove(connection);
     }
 
     public int numConnections()

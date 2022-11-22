@@ -62,7 +62,6 @@ public class Controller extends Node {
 							break;
 
 						String network = encoding.substring(beginIndex, beginIndex+l);
-						System.out.println(network);
 						networksF.addConnection(network,forwarderName);
 
 						if(i != length-1)
@@ -77,17 +76,17 @@ public class Controller extends Node {
                 }
                 else if(type.equals(CON_ENDPOINT))
                 {
-					int forwarderIndex = forwardersE.contains(tlvs.get(T_CONTAINER));
+					String forwarderName = packet.getAddress().getHostName();
+					forwarderName = forwarderName.substring(0,forwarderName.indexOf('.')); //removing netid from end of hostname
+					int forwarderIndex = forwardersE.contains(forwarderName);
 
 					if(forwarderIndex != -1 && !tlvs.containsKey(T_PORT))
 					{
-						String forwarderName = packet.getAddress().getHostName();
 						System.out.println("Removing connection between " + forwarderName + " and " + tlvs.get(T_CONTAINER));
 						forwardersE.removeConnection(forwarderName, tlvs.get(T_CONTAINER));
 					}
 					else if(tlvs.containsKey(T_PORT))
 					{
-						String forwarderName = packet.getAddress().getHostName();
 						System.out.println("Adding connection between " + forwarderName + " and " + tlvs.get(T_CONTAINER));
 						forwardersE.addConnection(forwarderName,tlvs.get(T_CONTAINER));
 					}

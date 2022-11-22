@@ -55,7 +55,7 @@ public class Endpoint extends Node
 
 				if(type.equals(ACK_PACKET))
 				{
-					endpointTerminal.println("From Forwarder: " + tlvs.get(T_MESSAGE));
+					endpointTerminal.println("From " + packet.getAddress().getHostName() + " : " + tlvs.get(T_MESSAGE));
 					this.notify();
 				}
 				else if(type.equals(MESSAGE_PACKET)) //receiving message from somewhere
@@ -69,6 +69,8 @@ public class Endpoint extends Node
                     endpointTerminal.println("Updating Forwarding List");
                     ArrayList<String> forwardersReceived = ((TLVPacket)content).readEncodingList();
                     forwarders = forwardersReceived;
+
+					this.notify();
                 }
 			}
 		}

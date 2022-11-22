@@ -89,7 +89,7 @@ public class Forwarder extends Node {
                             socket.send(packet);
                         }
 
-                        System.out.println("Sending ACK to endpoint");
+                        System.out.println("Sending ACK to " + tlvs.get(T_CONTAINER));
                         DatagramPacket ack;
                         String val = T_MESSAGE + "3ACK";
                         ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
