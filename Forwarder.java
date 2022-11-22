@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -120,7 +121,45 @@ public class Forwarder extends Node {
                             connectSend.setSocketAddress(dstAddress);
                             socket.send(connectSend);
                         }
-                        else
+                    else if(tlvs.containsKey(T_CONTAINER))
+                    {
+                        System.out.println("Hop encoded in message, forwarding packet.");
+                        ArrayList<String> encodings = ((TLVPacket)content).readEncodingList();
+                        String hopName = encodings.get(3);
+
+                        //Creating new val which is the same encoding but minus the next hop 
+                        String val = "";
+                        for(int i = 0; i < encodings.size(); i++)
+                        {
+                            String currentV = encodings.get(i);
+                            if(i == 0)
+                            {
+                                val = val + T_MESSAGE + Integer.toString(currentV.length()) + currentV;
+                            }
+                            else if(i == 1)
+                            {
+                                val = val + T_DEST_NAME + Integer.toString(currentV.length()) + currentV;
+                            }
+                            else if(i == 2)
+                            {
+                                val = val + T_SENDER_NAME + Integer.toString(currentV.length()) + currentV;
+                            }
+                            else if(i > 3)
+                            {
+                                val = val + T_CONTAINER + Integer.toString(currentV.length()) + currentV;
+                            }
+                        }
+
+                        DatagramPacket forwardMessage;
+                        Integer l = Integer.parseInt(((TLVPacket)content).getPacketLength()) - 1;
+                        forwardMessage = new TLVPacket(MESSAGE_PACKET, Integer.toString(l), val).toDatagramPacket();
+
+                        InetSocketAddress forwarderAddress = new InetSocketAddress(hopName, DEFAULT_SRC_PORT);
+                        forwardMessage.setSocketAddress(forwarderAddress);
+
+
+                    }
+                    else
                         {
                             droppedPackets.put(packet, tlvs.get(T_DEST_NAME));  
 
@@ -157,7 +196,7 @@ public class Forwarder extends Node {
                             DatagramPacket forwardMessage;
                             String val = ((TLVPacket)toModify).getPacketEncoding() + trueHops;
                             Integer l = Integer.parseInt(((TLVPacket)toModify).getPacketLength()) + Integer.parseInt(((TLVPacket)content).getPacketLength()) - 1;
-                            forwardMessage= new TLVPacket(MESSAGE_PACKET, Integer.toString(l), val).toDatagramPacket();
+                            forwardMessage = new TLVPacket(MESSAGE_PACKET, Integer.toString(l), val).toDatagramPacket();
 
                             InetSocketAddress forwarderAddress = new InetSocketAddress(hopName, DEFAULT_SRC_PORT);
                             forwardMessage.setSocketAddress(forwarderAddress);
