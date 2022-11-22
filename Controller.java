@@ -116,6 +116,37 @@ public class Controller extends Node {
                     forwarderList.setSocketAddress(packet.getSocketAddress());
                     socket.send(forwarderList);
 				}
+				else if(type.equals(FLOW_CONTROL_REQ))
+                {
+                    System.out.println("Looking for " + tlvs.get(T_DEST_NAME) + " in forwarding table.");
+					ArrayList<String> hops = new ArrayList<String>();
+					ArrayList<String> passed = new ArrayList<String>();
+					getHops(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME), passed, hops);
+
+					DatagramPacket flowRes;
+					if(hops.size() <= 1)
+					{
+						//TODO ADD FUTURE CHECKS WHEN NEW EDNPOINTS ADDED
+						System.out.println(tlvs.get(T_DEST_NAME) + " not in flow table.");
+						String val = T_MESSAGE + "3NAH";
+						flowRes= new TLVPacket(FLOW_CONTROL_RES, "1", val).toDatagramPacket();
+					}
+					else
+					{
+						int length = 1;
+						String val = T_DEST_NAME + Integer.toString(tlvs.get(T_DEST_NAME).length()) + tlvs.get(T_DEST_NAME);
+						for(int i = 0; i < hops.size(); i++)
+						{
+							String currentHop = hops.get(i);
+							val = val + T_CONTAINER + Integer.toString(currentHop.length()) + currentHop;
+							length++;
+						}
+						flowRes= new TLVPacket(FLOW_CONTROL_RES, Integer.toString(length), val).toDatagramPacket();
+					}
+
+					flowRes.setSocketAddress(packet.getSocketAddress());
+					socket.send(flowRes);
+                }
                 else
                 {
                     System.out.println("Not expected receive.");
@@ -152,6 +183,55 @@ public class Controller extends Node {
 		}
 
 		return networksF.getAllByOrigin(epID);
+	}
+
+	//Returns 1 if found ep, 0 if not, true return is hops array though
+	public synchronized int getHops(String forwarderOrigin, String destination, ArrayList<String> passed, ArrayList<String> hops)
+	{
+		int recursive = 0;
+		ArrayList<String> futureChecks = new ArrayList<String>();
+
+		for(int i = 0; i < networksF.size(); i++)
+		{
+			if(!passed.contains(Integer.toString(i)))
+			{
+				ArrayList<String> forwardersOnNetwork =  networksF.getAllByOrigin(i);
+				if(forwardersOnNetwork.contains(forwarderOrigin))
+				{
+					forwardersOnNetwork.remove(forwarderOrigin);
+					forwardersOnNetwork.removeAll(passed);
+
+					for(int j = 0; j < forwardersOnNetwork.size(); j++)
+					{
+						String currentForwarder = forwardersOnNetwork.get(j);
+
+						ArrayList<String> endpointsOnForwarders = forwardersE.getAllByOrigin(currentForwarder);
+						int epIndex = endpointsOnForwarders.indexOf(destination);
+						if(epIndex != -1)
+						{
+							hops.add(currentForwarder);
+							return 1;
+						}
+						else
+						{
+							futureChecks.add(currentForwarder);
+						}
+					}
+				}
+			}
+		}
+
+		for(int i = 0; i < futureChecks.size(); i++)
+		{
+			passed.add(futureChecks.get(i));
+			recursive = getHops(futureChecks.get(i), destination, passed, hops);
+			if(recursive == 1)
+			{
+				hops.add(0, futureChecks.get(i));
+				return recursive;
+			}
+		}
+		return recursive;
 	}
 
 	/**

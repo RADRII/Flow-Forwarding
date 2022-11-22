@@ -18,12 +18,22 @@ public class Connections
         return -1;
     }
 
+    public int size()
+    {
+        return list.size();
+    }
+
     public ArrayList<String> getAllByOrigin(String origin)
     {
         int index = this.contains(origin);
         if(index == -1)
             return null;
         
+        return list.get(index).getConnections();
+    }
+
+    public ArrayList<String> getAllByOrigin(int index)
+    {
         return list.get(index).getConnections();
     }
 
