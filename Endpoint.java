@@ -22,7 +22,7 @@ public class Endpoint extends Node
 	 *
 	 * Attempts to create socket at given port and create an InetSocketAddress for the destinations
 	 */
-	Endpoint(Terminal t, String dstHost, int dstPort, int srcPort) {
+	Endpoint(Terminal t, String dstHost, int dstPort) {
 		try {
             int lastChar = containerAlias.charAt((containerAlias.length()-1));;
             if(lastChar == 'A')
@@ -34,7 +34,7 @@ public class Endpoint extends Node
 
 			endpointTerminal = t;
 			controllerAddress= new InetSocketAddress(dstHost, dstPort);
-			socket= new DatagramSocket(srcPort);
+			socket= new DatagramSocket(DEFAULT_SRC_PORT);
 			listener.go();
 		}
 		catch(java.lang.Exception e) {e.printStackTrace();}
@@ -185,7 +185,7 @@ public class Endpoint extends Node
     public static void main(String[] args) {
 		try {
 			Terminal endpointTerminal = new Terminal("Endpoint");
-			(new Endpoint(endpointTerminal, DEFAULT_DST_NODE, CONTROLLER_DST_PORT, DEFAULT_SRC_PORT)).start();
+			(new Endpoint(endpointTerminal, DEFAULT_DST_NODE, CONTROLLER_DST_PORT)).start();
 			endpointTerminal.println("Program completed");
 		} catch(java.lang.Exception e) {e.printStackTrace();}
 	}

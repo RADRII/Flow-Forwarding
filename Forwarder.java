@@ -106,6 +106,8 @@ public class Forwarder extends Node {
                             String containerNameEP = tlvs.get(T_DEST_NAME);
                             InetAddress ip = InetAddress.getByName(containerNameEP); 	
                             InetSocketAddress currentDstAddress = new InetSocketAddress(ip, Integer.parseInt(forwardingTable.get(containerNameEP)));
+                            
+                            System.out.println(containerNameEP + "   :  " + ip + "   :   " + currentDstAddress);
                             packet.setSocketAddress(currentDstAddress);
                             socket.send(packet);
 
