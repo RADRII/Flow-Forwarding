@@ -212,6 +212,8 @@ public class Forwarder extends Node {
                             InetSocketAddress forwarderAddress = new InetSocketAddress(hopName, DEFAULT_SRC_PORT);
                             forwardMessage.setSocketAddress(forwarderAddress);
 
+                            //removing packet from dropped
+                            droppedPackets.remove(datagram);
                             try {
                                 socket.send(forwardMessage);
                             } catch (IOException e) {
