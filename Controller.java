@@ -92,46 +92,55 @@ public class Controller extends Node {
 						System.out.println("Adding connection between " + forwarderName + " and " + tlvs.get(T_CONTAINER));
 						forwardersE.addConnection(forwarderName,tlvs.get(T_CONTAINER));
 
-						//Check if theres a dropped packet with this as an endpoint
+						//Check if theres a dropped packet with the new connected endpoint as a destination (but not the forwarder who sent the message)
 						if(droppedPackets.contains(tlvs.get(T_CONTAINER)) != -1) 
 						{
-							System.out.println("Checking if a path for dropped packets exists now.");
+							System.out.println("Checking if a path for previously dropped packets exists now.");
 							String dest = tlvs.get(T_CONTAINER);
 							ArrayList<String> forwardersToCheck = droppedPackets.getAllByOrigin(dest);
 							for(int i = 0; i < forwardersToCheck.size(); i++)
 							{
 								String forwarder = forwardersToCheck.get(i);
-								ArrayList<String> hops = new ArrayList<String>();
-								ArrayList<String> passed = new ArrayList<String>();
-								getHops(forwarder, dest, passed, hops);
 
-								DatagramPacket flowRes;
-								if(hops.size() < 1)
+								if(forwarder.equals(forwarderName))
 								{
-									System.out.println("Path from " + forwarder + " and " + dest + " not found. Storing until path is found.");
+									droppedPackets.removeConnection(dest, forwarder);
 								}
 								else
 								{
-									System.out.println(dest + " found in flow table, sending hops and removing from dropped.");
-									int length = 1;
-									String val = dest + Integer.toString(dest.length()) + dest;
-									for(int j = 0; j < hops.size(); j++)
+									ArrayList<String> hops = new ArrayList<String>();
+									ArrayList<String> passed = new ArrayList<String>();
+									getHops(forwarder, dest, passed, hops);
+
+									DatagramPacket flowRes;
+									if(hops.size() < 1)
 									{
-										String currentHop = hops.get(j);
-										val = val + T_CONTAINER + Integer.toString(currentHop.length()) + currentHop;
-										length++;
+										System.out.println("Path from " + forwarder + " and " + dest + " still not found. Continue storing.");
 									}
-									flowRes= new TLVPacket(FLOW_CONTROL_RES, Integer.toString(length), val).toDatagramPacket();
-									InetSocketAddress forwarderAddress = new InetSocketAddress(forwarder, DEFAULT_SRC_PORT);
-									flowRes.setSocketAddress(forwarderAddress);
-									try {
-										socket.send(flowRes);
-									} catch (IOException e) {
-										e.printStackTrace();
+									else
+									{
+										System.out.println(dest + " found in flow table, sending hops and removing from dropped packets list.");
+										int length = 1;
+										String val = dest + Integer.toString(dest.length()) + dest;
+										for(int j = 0; j < hops.size(); j++)
+										{
+											String currentHop = hops.get(j);
+											val = val + T_CONTAINER + Integer.toString(currentHop.length()) + currentHop;
+											length++;
+										}
+										flowRes= new TLVPacket(FLOW_CONTROL_RES, Integer.toString(length), val).toDatagramPacket();
+										InetSocketAddress forwarderAddress = new InetSocketAddress(forwarder, DEFAULT_SRC_PORT);
+										flowRes.setSocketAddress(forwarderAddress);
+										try {
+											socket.send(flowRes);
+										} catch (IOException e) {
+											e.printStackTrace();
+										}
+										droppedPackets.removeConnection(dest, forwarder);
 									}
-									droppedPackets.removeConnection(dest, forwarder);
 								}
 							}
+							System.out.println("Finished checking dropped packets.");
 						}
 						
 					}
@@ -142,7 +151,7 @@ public class Controller extends Node {
                 }
 				else if(type.equals(FORWARDER_LIST_REQ))
 				{
-					System.out.println(tlvs.get(T_CONTAINER) + " requesting relvent forwarders.");
+					System.out.println(tlvs.get(T_CONTAINER) + " requesting relavent forwarders.");
 					//taking ip address of endpoint and subtracting the last two digits to get network ip
 					String ip = packet.getAddress().toString();
 					ip = ip.substring(0,ip.length()-2);
