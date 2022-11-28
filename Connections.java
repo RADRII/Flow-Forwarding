@@ -100,7 +100,7 @@ class Connection
 
     public ArrayList<String> getConnections()
     {
-        return forwardersOrEndpoints;
+        return new ArrayList<String>(forwardersOrEndpoints);
     }
 
     public void addConnection(String connection)

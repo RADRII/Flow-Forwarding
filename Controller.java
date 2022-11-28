@@ -171,7 +171,7 @@ public class Controller extends Node {
 						val = val + T_CONTAINER + Integer.toString(forwarderOnIP.get(i).length()) + forwarderOnIP.get(i);
 						System.out.println(forwarderOnIP.get(i));
 					}
-					System.out.println("Sending list of network to " + tlvs.get(T_CONTAINER));
+					System.out.println("Sending list of networks to " + tlvs.get(T_CONTAINER));
 					
                     forwarderList= new TLVPacket(FORWARDER_LIST, Integer.toString(forwarderOnIP.size()), val).toDatagramPacket();
                     forwarderList.setSocketAddress(packet.getSocketAddress());
