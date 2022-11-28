@@ -67,7 +67,9 @@ public class Forwarder extends Node {
 					System.out.println("From Controller: " + tlvs.get(T_MESSAGE));
                     if(tlvs.get(T_MESSAGE).equals("FIN"))
                     {
+                        System.out.println(waiting);
                         String waitingEndpoint = ((InetSocketAddress) waiting).getHostName();
+
                         System.out.println("Sending message backlog (if any) to " + waitingEndpoint);
                         sendBackLogs(0,waitingEndpoint, "", waitingEndpoint);
 
@@ -90,12 +92,12 @@ public class Forwarder extends Node {
                         System.out.println("Adding " + tlvs.get(T_CONTAINER) + " to forwarding table of forwarder");
                         forwardingTable.put(tlvs.get(T_CONTAINER), tlvs.get(T_PORT));
 
+                        waitingForBacklog = true;
+                        waiting = packet.getSocketAddress();
+
                         System.out.println("Informing Controller, waiting for backlogged messages to come through.");
                         packet.setSocketAddress(dstAddress);
                         socket.send(packet);
-
-                        waitingForBacklog = true;
-                        waiting = packet.getSocketAddress();
                     }
                     else
                     {
