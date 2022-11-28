@@ -138,7 +138,7 @@ public class Forwarder extends Node {
                             {
                                 System.out.println("Sending ACK to " + tlvs.get(T_DEST_NAME));
                                 DatagramPacket ack;
-                                String val = T_MESSAGE + "3FIN";
+                                String val = T_MESSAGE + "3ACK";
                                 ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
                                 ack.setSocketAddress(currentDstAddress);
                                 socket.send(ack);
@@ -190,6 +190,7 @@ public class Forwarder extends Node {
 
                         InetSocketAddress forwarderAddress = new InetSocketAddress(hopName, DEFAULT_SRC_PORT);
                         forwardMessage.setSocketAddress(forwarderAddress);
+                        socket.send(forwardMessage);
                     }
                     else
                     {
