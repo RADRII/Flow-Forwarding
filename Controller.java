@@ -150,7 +150,7 @@ public class Controller extends Node {
 						this.wait(3000); //waiting three seconds for backlogged messages to be transferred 
 
 						DatagramPacket ack;
-						String val = T_MESSAGE + "3FIN";
+						String val = T_MESSAGE + "3ACK";
 						ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
 						ack.setSocketAddress(packet.getSocketAddress());
 						socket.send(ack);

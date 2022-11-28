@@ -65,10 +65,10 @@ public class Forwarder extends Node {
 				if(type.equals(ACK_PACKET))
 				{
 					System.out.println("From Controller: " + tlvs.get(T_MESSAGE));
-                    if(tlvs.get(T_MESSAGE).equals("FIN"))
+                    if(waitingForBacklog == true)
                     {
-                        System.out.println(waiting);
                         String waitingEndpoint = ((InetSocketAddress) waiting).getHostName();
+                        waitingEndpoint = waitingEndpoint.substring(0,waitingEndpoint.indexOf('.'));
 
                         System.out.println("Sending message backlog (if any) to " + waitingEndpoint);
                         sendBackLogs(0,waitingEndpoint, "", waitingEndpoint);
