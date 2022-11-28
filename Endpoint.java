@@ -62,7 +62,6 @@ public class Endpoint extends Node
 				{
 
 					endpointTerminal.println("From " + tlvs.get(T_SENDER_NAME) + ": " + tlvs.get(T_MESSAGE));
-					this.notify();
 				}
                 else if(type.equals(FORWARDER_LIST))
                 {

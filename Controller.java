@@ -1,4 +1,6 @@
 import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -15,6 +17,7 @@ public class Controller extends Node {
 
     Connections forwardersE = new Connections();
 	Connections networksF = new Connections();
+	Connections droppedPackets = new Connections();
     
 	/**
 	 * Constructor
@@ -88,6 +91,49 @@ public class Controller extends Node {
 					{
 						System.out.println("Adding connection between " + forwarderName + " and " + tlvs.get(T_CONTAINER));
 						forwardersE.addConnection(forwarderName,tlvs.get(T_CONTAINER));
+
+						//Check if theres a dropped packet with this as an endpoint
+						if(droppedPackets.contains(tlvs.get(T_CONTAINER)) != -1) 
+						{
+							System.out.println("Checking if a path for dropped packets exists now.");
+							String dest = tlvs.get(T_CONTAINER);
+							ArrayList<String> forwardersToCheck = droppedPackets.getAllByOrigin(dest);
+							for(int i = 0; i < forwardersToCheck.size(); i++)
+							{
+								String forwarder = forwardersToCheck.get(i);
+								ArrayList<String> hops = new ArrayList<String>();
+								ArrayList<String> passed = new ArrayList<String>();
+								getHops(forwarder, dest, passed, hops);
+
+								DatagramPacket flowRes;
+								if(hops.size() < 1)
+								{
+									System.out.println("Path from " + forwarder + " and " + dest + " not found. Storing until path is found.");
+								}
+								else
+								{
+									System.out.println(dest + " found in flow table, sending hops and removing from dropped.");
+									int length = 1;
+									String val = dest + Integer.toString(dest.length()) + dest;
+									for(int j = 0; j < hops.size(); j++)
+									{
+										String currentHop = hops.get(j);
+										val = val + T_CONTAINER + Integer.toString(currentHop.length()) + currentHop;
+										length++;
+									}
+									flowRes= new TLVPacket(FLOW_CONTROL_RES, Integer.toString(length), val).toDatagramPacket();
+									InetSocketAddress forwarderAddress = new InetSocketAddress(forwarder, DEFAULT_SRC_PORT);
+									flowRes.setSocketAddress(forwarderAddress);
+									try {
+										socket.send(flowRes);
+									} catch (IOException e) {
+										e.printStackTrace();
+									}
+									droppedPackets.removeConnection(dest, forwarder);
+								}
+							}
+						}
+						
 					}
 					else
 					{
@@ -125,8 +171,8 @@ public class Controller extends Node {
 					DatagramPacket flowRes;
 					if(hops.size() < 1)
 					{
-						//todo ADD FUTURE CHECKS WHEN NEW EDNPOINTS ADDED
-						System.out.println(tlvs.get(T_DEST_NAME) + " not in flow table. Packet Dropped.");
+						System.out.println("Path from " + tlvs.get(T_CONTAINER) + " and " + tlvs.get(T_DEST_NAME) + " not found. Storing until path is found.");
+						droppedPackets.addConnection(tlvs.get(T_DEST_NAME), tlvs.get(T_CONTAINER));
 					}
 					else
 					{
