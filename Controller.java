@@ -54,7 +54,7 @@ public class Controller extends Node {
 					String forwarderName = encoding.substring(2, 2+Character.getNumericValue(encoding.charAt(1)));
 					encoding = encoding.substring(2+Character.getNumericValue(encoding.charAt(1)));
 
-					System.out.println(forwarderName + " is on " + (length-1) + " networks. Sending ACK");
+					System.out.println(forwarderName + " is on " + (length-1) + " networks:");
 
 					for(int i = 0; i < length-1; i++)
 					{
@@ -67,9 +67,13 @@ public class Controller extends Node {
 						String network = encoding.substring(beginIndex, beginIndex+l);
 						networksF.addConnection(network,forwarderName);
 
+						System.out.println(network);
+
 						if(i != length-1)
 							encoding = encoding.substring(beginIndex+l);
 					}
+
+					System.out.println("Sending ACK to " + forwarderName);
 
                     DatagramPacket ack;
 					String val = T_MESSAGE + "3ACK";
@@ -158,14 +162,17 @@ public class Controller extends Node {
 
 					//getting all forwarders that have the same base ip
 					ArrayList<String> forwarderOnIP = getForwardersOnIP(ip);
-					System.out.println("Found " + forwarderOnIP.size() + " relavent forwarders, sending names.");
+					System.out.println("Found " + forwarderOnIP.size() + " relavent forwarders: ");
 
 					DatagramPacket forwarderList;
 					String val = "";
 					for(int i = 0; i < forwarderOnIP.size(); i++)
 					{
 						val = val + T_CONTAINER + Integer.toString(forwarderOnIP.get(i).length()) + forwarderOnIP.get(i);
+						System.out.println(forwarderOnIP.get(i));
 					}
+					System.out.println("Sending list of network to " + tlvs.get(T_CONTAINER));
+					
                     forwarderList= new TLVPacket(FORWARDER_LIST, Integer.toString(forwarderOnIP.size()), val).toDatagramPacket();
                     forwarderList.setSocketAddress(packet.getSocketAddress());
                     socket.send(forwarderList);
