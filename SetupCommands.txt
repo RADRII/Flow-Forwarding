@@ -1,0 +1,87 @@
+#This document contains an example of commands to run in order to test this project
+#It can be done with a different setup but there are some rules that must be followed
+#The following example contains 4 networks, 4 endpoints, 3 forwarders, and 1 controller
+#It can be run with any number of forwarders, networks, and endpoints but there must always be one controller.
+#It was tested using Docker on the Max and Xquartz
+#Even if you do not end up using these commands, please do pay attention to the 'IMPORTANT' markers for important information.
+
+#Create 4 bridge sub networks
+#Defining the IP addresses is not necessary, I did so here for easier testing
+#IMPORTANT: Before running change the BRIDGE_NET_IP and HOST_NET_IP values in Node
+#This is dependent on your device and might be different to mine.
+docker network create -d bridge --subnet 172.30.0.0/16 ffnet1
+docker network create -d bridge --subnet 172.40.0.0/16 ffnet2
+docker network create -d bridge --subnet 172.50.0.0/16 ffnet3
+docker network create -d bridge --subnet 172.60.0.0/16 ffnet4
+
+#Create the Docker Image
+#This can have any name but note it down for future commands
+docker build −t ffnetimage .
+
+#Create 7 Docker containers
+#Forwarders are all named f(number), endpoints are all named END(char), and the controller is named controller
+#Any naming scheme you want also works, but
+#IMPORTANT: Be sure to define a hostname along with a name, which are the same and
+#IMPORTANT: Container names cannot start with a number!
+#IMPORTANT: The port number of an endpoint depends on the last char of its name, by default it's 50004, further info in Endpoint constructor. 
+docker create -ti --name fone --hostname fone --cap-add=all -v ~/compnets:/compnets ffnetimage /bin/bash
+docker create -ti --name ftwo --hostname ftwo --cap-add=all -v ~/compnets:/compnets ffnetimage /bin/bash
+docker create -ti --name fthree --hostname fthree --cap-add=all -v ~/compnets:/compnets ffnetimage /bin/bash
+docker create -ti --name ENDA --hostname ENDA --cap-add=all -v ~/compnets:/compnets ffnetimage /bin/bash
+docker create -ti --name ENDB --hostname ENDB --cap-add=all -v ~/compnets:/compnets ffnetimage /bin/bash
+docker create -ti --name ENDC --hostname ENDC --cap-add=all -v ~/compnets:/compnets ffnetimage /bin/bash
+docker create -ti --name ENDD --hostname ENDD --cap-add=all -v ~/compnets:/compnets ffnetimage /bin/bash
+docker create -ti --name controller --hostname controller --cap-add=all -v ~/compnets:/compnets ffnetimage /bin/bash
+
+#Connect the containers to networks
+#This will heavily depend on what topology you want, you can have any number of endpoints and forwarders on networks
+#This example has one endpoint on each network, with forwarders connecting 2 networks together
+#IMPORTANT: The controller must be connected to every single subnet you have.
+docker network connect ffnet1 ENDA
+docker network connect ffnet2 ENDB
+docker network connect ffnet3 ENDC
+docker network connect ffnet4 ENDD
+docker network connect ffnet1 fone
+docker network connect ffnet2 fone
+docker network connect ffnet2 ftwo
+docker network connect ffnet3 ftwo
+docker network connect ffnet3 fthree
+docker network connect ffnet4 fthree
+docker network connect ffnet1 controller
+docker network connect ffnet2 controller
+docker network connect ffnet3 controller
+docker network connect ffnet4 controller
+
+#Start the containers (any order works)
+docker start -i controller
+docker start -i fone
+docker start -i ftwo
+docker start -i fthree
+docker start -i ENDA
+docker start -i ENDB
+docker start -i ENDC
+docker start -i ENDD
+
+#Compile java scripts
+#Run these two lines in EACH container
+cd ffnet
+javac *.java
+
+#Set Xquartz up
+#IMPORTANT: Run these lines in EACH endpoint container
+mkdir /tmp/foobar
+chmod 700 /tmp/foobar
+export DISPLAY=host.docker.internal:0
+export LIBGL_ALWAYS_INDIRECT=1
+export XDG_RUNTIME_DIR=/tmp/foobar
+
+#Enable Xquartz
+#IMPORTANT: Do this in a seperate terminal from the containers.
+xhost +
+
+#Run the code
+#For endpoints fileName = 'Endpoint.java', for forwarders fileName = 'Forwarder.java', for fileName = controller 'Controller.java"
+#IMPORTANT: Run the controller FIRST, then run all forwarders SECOND, Endpoints are ran LAST but don't all have to start at once.
+java fileName
+
+#Further instructions for sending and receiving messages are then given in the Endpoint terminals, happy forwarding!
