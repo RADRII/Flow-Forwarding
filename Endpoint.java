@@ -121,6 +121,7 @@ public class Endpoint extends Node
 			else if(userInput != null && userInput.equals("receive"))
 			{
 				endpointTerminal.println("Connecting to this network's Forwarder/s");
+				endpointTerminal.println("May receive a backlog of messages.");
 				DatagramPacket connectReceive;
 				String val = T_PORT + "5" + Integer.toString(DEFAULT_SRC_PORT) + T_CONTAINER + aliasLength + containerAlias;
 				connectReceive= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();

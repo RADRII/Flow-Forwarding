@@ -171,7 +171,7 @@ public class Forwarder extends Node {
                     {
                         droppedPackets.put(packet, tlvs.get(T_DEST_NAME));  
 
-                        System.out.println(tlvs.get(T_DEST_NAME) + " not in this forwarders forwarding table, requesting path from controller.");
+                        System.out.println(tlvs.get(T_DEST_NAME) + " not in this forwarders forwarding table, informing controller of need for path.");
                         int destNameLength = tlvs.get(T_DEST_NAME).length();
                         String val = T_DEST_NAME + destNameLength + tlvs.get(T_DEST_NAME) + T_CONTAINER + aliasLength + containerAlias;
                         DatagramPacket flowRequest= new TLVPacket(FLOW_CONTROL_REQ, "2", val).toDatagramPacket();
