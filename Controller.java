@@ -135,8 +135,6 @@ public class Controller extends Node {
 
 										DatagramPacket flowRes= new TLVPacket(FLOW_CONTROL_RES, Integer.toString(length), val).toDatagramPacket();
 										InetSocketAddress forwarderAddress = new InetSocketAddress(forwarder, DEFAULT_DST_PORT);
-										System.out.println(val);
-										System.out.println(forwarderAddress);
 										flowRes.setSocketAddress(forwarderAddress);
 										try {
 											socket.send(flowRes);
@@ -147,9 +145,15 @@ public class Controller extends Node {
 									}
 								}
 							}
-							System.out.println("Finished checking dropped packets.");
 						}
-						
+						System.out.println("Finished checking dropped packets, sending Ack to Connecting Forwarder.");
+						this.wait(3000); //waiting three seconds for backlogged messages to be transferred 
+
+						DatagramPacket ack;
+						String val = T_MESSAGE + "3FIN";
+						ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
+						ack.setSocketAddress(packet.getSocketAddress());
+						socket.send(ack);
 					}
 					else
 					{

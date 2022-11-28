@@ -178,7 +178,7 @@ public class Endpoint extends Node
 				messageSend.setSocketAddress(defaultForwarderAddress);
 				socket.send(messageSend);
 
-				this.wait(5000);
+				this.wait(2000);
 			}
 			else
 			{
