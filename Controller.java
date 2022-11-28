@@ -257,35 +257,36 @@ public class Controller extends Node {
 		int recursive = 0;
 		ArrayList<String> futureChecks = new ArrayList<String>();
 
+		passed.add(forwarderOrigin);
+
 		for(int i = 0; i < networksF.size(); i++)
 		{
-			if(!passed.contains(Integer.toString(i)))
+			ArrayList<String> forwardersOnNetwork =  networksF.getAllByOrigin(i);
+			if(forwardersOnNetwork.contains(forwarderOrigin))
 			{
-				ArrayList<String> forwardersOnNetwork =  networksF.getAllByOrigin(i);
-				if(forwardersOnNetwork.contains(forwarderOrigin))
+				forwardersOnNetwork.removeAll(passed);
+
+				for(int j = 0; j < forwardersOnNetwork.size(); j++)
 				{
-					forwardersOnNetwork.remove(forwarderOrigin);
-					forwardersOnNetwork.removeAll(passed);
+					String currentForwarder = forwardersOnNetwork.get(j);
 
-					for(int j = 0; j < forwardersOnNetwork.size(); j++)
+					ArrayList<String> endpointsOnForwarders = forwardersE.getAllByOrigin(currentForwarder);
+
+					int epIndex = -1;
+					if(endpointsOnForwarders != null)
 					{
-						String currentForwarder = forwardersOnNetwork.get(j);
-
-						ArrayList<String> endpointsOnForwarders = forwardersE.getAllByOrigin(currentForwarder);
-
-						int epIndex = -1;
-						if(endpointsOnForwarders != null)
-							epIndex = endpointsOnForwarders.indexOf(destination);
-							
-						if(epIndex != -1)
-						{
-							hops.add(currentForwarder);
-							return 1;
-						}
-						else
-						{
+						epIndex = endpointsOnForwarders.indexOf(destination);
+					}
+						
+					if(epIndex != -1)
+					{
+						hops.add(currentForwarder);
+						return 1;
+					}
+					else
+					{
+						if(!futureChecks.contains(currentForwarder))
 							futureChecks.add(currentForwarder);
-						}
 					}
 				}
 			}
@@ -293,7 +294,6 @@ public class Controller extends Node {
 
 		for(int i = 0; i < futureChecks.size(); i++)
 		{
-			passed.add(futureChecks.get(i));
 			recursive = getHops(futureChecks.get(i), destination, passed, hops);
 			if(recursive == 1)
 			{
