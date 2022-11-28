@@ -29,8 +29,10 @@ public class Endpoint extends Node
                 DEFAULT_SRC_PORT = 50001;
             else if(lastChar == 'B')
                 DEFAULT_SRC_PORT = 50002;
+			else if(lastChar == 'C')
+				DEFAULT_SRC_PORT = 50003;
             else
-                DEFAULT_SRC_PORT = 50003;
+                DEFAULT_SRC_PORT = 50004;
 
 			endpointTerminal = t;
 			controllerAddress= new InetSocketAddress(dstHost, dstPort);
