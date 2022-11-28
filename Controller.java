@@ -14,6 +14,7 @@ import java.util.HashMap;
  */
 public class Controller extends Node {
 	static final int DEFAULT_SRC_PORT = 50000;
+	static final int DEFAULT_DST_PORT = 54321;
 
     Connections forwardersE = new Connections();
 	Connections networksF = new Connections();
@@ -116,24 +117,26 @@ public class Controller extends Node {
 									ArrayList<String> passed = new ArrayList<String>();
 									getHops(forwarder, dest, passed, hops);
 
-									DatagramPacket flowRes;
 									if(hops.size() < 1)
 									{
 										System.out.println("Path from " + forwarder + " and " + dest + " still not found. Continue storing.");
 									}
 									else
 									{
-										System.out.println(dest + " found in flow table, sending hops and removing from dropped packets list.");
+										System.out.println(dest + " to " + forwarder + " found in flow table, sending hops and removing from dropped packets list.");
 										int length = 1;
-										String val = dest + Integer.toString(dest.length()) + dest;
+										String val = T_DEST_NAME + Integer.toString(dest.length()) + dest;
 										for(int j = 0; j < hops.size(); j++)
 										{
 											String currentHop = hops.get(j);
 											val = val + T_CONTAINER + Integer.toString(currentHop.length()) + currentHop;
 											length++;
 										}
-										flowRes= new TLVPacket(FLOW_CONTROL_RES, Integer.toString(length), val).toDatagramPacket();
-										InetSocketAddress forwarderAddress = new InetSocketAddress(forwarder, DEFAULT_SRC_PORT);
+
+										DatagramPacket flowRes= new TLVPacket(FLOW_CONTROL_RES, Integer.toString(length), val).toDatagramPacket();
+										InetSocketAddress forwarderAddress = new InetSocketAddress(forwarder, DEFAULT_DST_PORT);
+										System.out.println(val);
+										System.out.println(forwarderAddress);
 										flowRes.setSocketAddress(forwarderAddress);
 										try {
 											socket.send(flowRes);
