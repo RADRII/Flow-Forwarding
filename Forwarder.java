@@ -221,6 +221,7 @@ public class Forwarder extends Node {
 
     public synchronized void sendBackLogs(int hopL, String destName, String trueHops, String hopName)
     {
+        ArrayList<DatagramPacket> toRemove = new ArrayList<DatagramPacket>();
         droppedPackets.forEach((datagram, dest) -> 
         {
             if(dest.equals(destName))
@@ -244,8 +245,7 @@ public class Forwarder extends Node {
                     forwardAddress = new InetSocketAddress(hopName, DEFAULT_SRC_PORT);
                 forwardMessage.setSocketAddress(forwardAddress);
 
-                //removing packet from dropped
-                droppedPackets.remove(datagram);
+                toRemove.add(datagram);
                 try {
                     socket.send(forwardMessage);
                 } catch (IOException e) {
@@ -253,6 +253,12 @@ public class Forwarder extends Node {
                 }
             }
         });
+
+        //removing previously dropped packets that were sent
+        for(int i = 0; i < toRemove.size(); i++)
+        {
+            droppedPackets.remove(toRemove.get(i));
+        }
     }
 
 	/**
