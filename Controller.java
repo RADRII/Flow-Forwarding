@@ -258,7 +258,11 @@ public class Controller extends Node {
 						String currentForwarder = forwardersOnNetwork.get(j);
 
 						ArrayList<String> endpointsOnForwarders = forwardersE.getAllByOrigin(currentForwarder);
-						int epIndex = endpointsOnForwarders.indexOf(destination);
+
+						int epIndex = -1;
+						if(endpointsOnForwarders != null)
+							epIndex = endpointsOnForwarders.indexOf(destination);
+							
 						if(epIndex != -1)
 						{
 							hops.add(currentForwarder);
