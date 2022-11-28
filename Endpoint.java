@@ -156,8 +156,10 @@ public class Endpoint extends Node
 				while(true)
 				{
 					containerName = endpointTerminal.read("Type Name Here");
-					if(containerName == null || containerName.length() <= 3)
+					if(containerName == null)
 						endpointTerminal.println("Invalid Response");
+					else if(containerName.equals(containerAlias))
+						endpointTerminal.println("Invalid Response: Cannot send message to self.");
 					else
 						break;
 				}
@@ -166,7 +168,7 @@ public class Endpoint extends Node
 				while(true)
 				{
 					message = endpointTerminal.read("Type Message Here");
-					if(message == null || message.length() < 1)
+					if(message == null || message.length() < 1 || Character.isDigit(message.charAt(0)))
 						endpointTerminal.println("Invalid Response");
 					else
 						break;
