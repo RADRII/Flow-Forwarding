@@ -258,19 +258,11 @@ public class Controller extends Node {
 		passed.add(forwarderOrigin);
 		if(forwarderOrigin.equals(destination))
 		{
-			System.out.println("AHAHAHAHA");
 			hops.remove(forwarderOrigin);
 			return new ArrayList<String>(hops);
 		}
 		
 		ArrayList<String> neighbors = routingTable.getAllByEnd(forwarderOrigin);
-
-		System.out.println("DUHWUIFHIOWFHU");
-		ArrayList<Link> l = routingTable.getGraph();
-		for(int i = 0; i < l.size(); i++)
-		{
-			System.out.println(l.get(i).start + "     " + l.get(i).end);
-		}
 		neighbors.removeAll(passed);
 
 		ArrayList<String> toReturn = null;
