@@ -187,7 +187,7 @@ public class Controller extends Node {
 				}
 				else if(type.equals(FLOW_CONTROL_REQ))
                 {
-                    System.out.println("Looking for " + tlvs.get(T_DEST_NAME) + " in forwarding table.");
+                    System.out.println("Looking for " + tlvs.get(T_DEST_NAME) + " in forwarding table for: " + tlvs.get(T_CONTAINER));
 					ArrayList<String> traverse = new ArrayList<String>();
 					ArrayList<String> passed = new ArrayList<String>();
 					ArrayList<String> hops = getHops(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME), passed,traverse);
