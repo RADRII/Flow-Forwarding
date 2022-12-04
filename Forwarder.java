@@ -344,6 +344,8 @@ public class Forwarder extends Node {
         connectSend.setSocketAddress(dstAddress);
         socket.send(connectSend);
 
+        this.wait();
+
         System.out.println("~Waiting for Contact~");
 		this.wait();
 	}
