@@ -116,7 +116,7 @@ public class Controller extends Node {
 									ArrayList<String> passed = new ArrayList<String>();
 									ArrayList<String> hops = getHops(forwarder, dest, passed, traverse);
 
-									if(hops.size() < 1)
+									if(hops == null)
 									{
 										System.out.println("Path from " + forwarder + " and " + dest + " still not found. Continue storing.");
 									}
@@ -191,7 +191,7 @@ public class Controller extends Node {
 					ArrayList<String> hops = getHops(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME), passed,traverse);
 
 					DatagramPacket flowRes;
-					if(hops.size() < 1)
+					if(hops == null)
 					{
 						System.out.println("Path from " + tlvs.get(T_CONTAINER) + " and " + tlvs.get(T_DEST_NAME) + " not found. Storing until path is found.");
 						droppedPackets.addLink(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME));
