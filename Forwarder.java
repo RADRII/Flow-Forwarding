@@ -120,7 +120,7 @@ public class Forwarder extends Node {
                                 System.out.println(tlvs.get(T_DEST_NAME) + " found in forwarding table via " + forwardingTable.get(tlvs.get(T_DEST_NAME)) + " - Sending packet.");
                             }
                             else if(waitingForBacklog == false)
-                                System.out.println(tlvs.get(T_DEST_NAME) + " found in forwarding table - Sending packet.");
+                                System.out.println(tlvs.get(T_DEST_NAME) + " found in forwarding table - Sending message packet: " + tlvs.get(T_MESSAGE));
                             else
                                 System.out.println("Backlog message received for " + tlvs.get(T_DEST_NAME) + ", sending on.");
 

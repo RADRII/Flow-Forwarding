@@ -22,7 +22,8 @@ docker build −t ffnetimage .
 #Forwarders are all named f(number), endpoints are all named END(char), and the controller is named controller
 #Any naming scheme you want also works, but
 #IMPORTANT: Be sure to define a hostname along with a name, which are the same and
-#IMPORTANT: Container names cannot start with a number!
+#IMPORTANT: Container names cannot start with a number! and
+#IMPORTANT: The container you run the controller on MUST be named controller
 #IMPORTANT: The port number of an endpoint depends on the last char of its name, by default it's 50004, further info in Endpoint constructor. 
 docker create -ti --name fone --hostname fone --cap-add=all -v ~/compnets:/compnets ffnetimage /bin/bash
 docker create -ti --name ftwo --hostname ftwo --cap-add=all -v ~/compnets:/compnets ffnetimage /bin/bash

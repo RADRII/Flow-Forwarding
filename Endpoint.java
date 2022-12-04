@@ -9,7 +9,6 @@ public class Endpoint extends Node
 	static final int CONTROLLER_DST_PORT = 50000;
     static final int FORWARDER_DST_PORT = 54321;
     static final String DEFAULT_DST_NODE = "controller";
-    static final String DEFAULT_FORWARDER_NODE = "forwarderone";
     static int DEFAULT_SRC_PORT;
 
     InetSocketAddress controllerAddress;
@@ -163,7 +162,7 @@ public class Endpoint extends Node
 				{
 					message = endpointTerminal.read("Type Message Here");
 					endpointTerminal.println("--> "+ message);
-					
+
 					if(message == null || message.length() < 1 || Character.isDigit(message.charAt(0)))
 						endpointTerminal.println("Invalid Response");
 					else
