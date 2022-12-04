@@ -106,21 +106,10 @@ public class Endpoint extends Node
         //Start User Interaction
 		while (true) 
 		{
-			endpointTerminal.println("Type 'receive' to receive packets, 'send' to send, 'quit' to quit.");
+			endpointTerminal.println("Type 'receive' to receive packets or 'send' to send.");
 
 			String userInput = endpointTerminal.read("Type Here");
-			if(userInput != null && userInput.equals("quit"))
-			{
-				endpointTerminal.println("Disconnecting from network");
-				DatagramPacket disconnect;
-				String val = T_MESSAGE + "3DIS" + T_CONTAINER + aliasLength + containerAlias;
-				disconnect= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
-				disconnect.setSocketAddress(defaultForwarderAddress);
-				socket.send(disconnect);
-				this.wait();
-				System.exit(0);
-			}
-			else if(userInput != null && userInput.equals("receive"))
+			if(userInput != null && userInput.equals("receive"))
 			{
 				endpointTerminal.println("Connecting to this network's Forwarder/s");
 				endpointTerminal.println("May receive a backlog of messages.");
