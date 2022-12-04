@@ -16,9 +16,9 @@ public class Controller extends Node {
 	static final int DEFAULT_SRC_PORT = 50000;
 	static final int DEFAULT_DST_PORT = 54321;
 
-    Connections forwardersE = new Connections();
-	Connections networksF = new Connections();
-	Connections droppedPackets = new Connections();
+	Graph networksToF = new Graph();
+	Graph routingTable = new Graph();
+	Graph droppedPackets = new Graph();
     
 	/**
 	 * Constructor
@@ -66,7 +66,7 @@ public class Controller extends Node {
 							break;
 
 						String network = encoding.substring(beginIndex, beginIndex+l);
-						networksF.addConnection(network,forwarderName);
+						networksToF.addLink(network, forwarderName);
 
 						System.out.println(network);
 
@@ -86,30 +86,29 @@ public class Controller extends Node {
                 {
 					String forwarderName = packet.getAddress().getHostName();
 					forwarderName = forwarderName.substring(0,forwarderName.indexOf('.')); //removing netid from end of hostname
-					int forwarderIndex = forwardersE.contains(forwarderName);
 
-					if(forwarderIndex != -1 && !tlvs.containsKey(T_PORT))
+					if(!tlvs.containsKey(T_PORT))
 					{
-						forwardersE.removeAllByConnection(tlvs.get(T_CONTAINER));
+						routingTable.removeAllByEnd(tlvs.get(T_CONTAINER));
 					}
 					else if(tlvs.containsKey(T_PORT))
 					{
 						System.out.println("Adding connection between " + forwarderName + " and " + tlvs.get(T_CONTAINER));
-						forwardersE.addConnection(forwarderName,tlvs.get(T_CONTAINER));
+						routingTable.addLink(forwarderName, tlvs.get(T_CONTAINER));
 
 						//Check if theres a dropped packet with the new connected endpoint as a destination (but not the forwarder who sent the message)
-						if(droppedPackets.contains(tlvs.get(T_CONTAINER)) != -1) 
+						ArrayList<String> forwardersForUpdate = droppedPackets.getAllByEnd(tlvs.get(T_CONTAINER));
+						if(forwardersForUpdate.size() > 0) 
 						{
 							System.out.println("Checking if a path for previously dropped packets exists now.");
 							String dest = tlvs.get(T_CONTAINER);
-							ArrayList<String> forwardersToCheck = droppedPackets.getAllByOrigin(dest);
-							for(int i = 0; i < forwardersToCheck.size(); i++)
+							for(int i = 0; i < forwardersForUpdate.size(); i++)
 							{
-								String forwarder = forwardersToCheck.get(i);
+								String forwarder = forwardersForUpdate.get(i);
 
 								if(forwarder.equals(forwarderName))
 								{
-									droppedPackets.removeConnection(dest, forwarder);
+									droppedPackets.removeLink(forwarder, dest);
 								}
 								else
 								{
@@ -141,7 +140,7 @@ public class Controller extends Node {
 										} catch (IOException e) {
 											e.printStackTrace();
 										}
-										droppedPackets.removeConnection(dest, forwarder);
+										droppedPackets.removeLink(forwarder, dest);
 									}
 								}
 							}
@@ -195,7 +194,7 @@ public class Controller extends Node {
 					if(hops.size() < 1)
 					{
 						System.out.println("Path from " + tlvs.get(T_CONTAINER) + " and " + tlvs.get(T_DEST_NAME) + " not found. Storing until path is found.");
-						droppedPackets.addConnection(tlvs.get(T_DEST_NAME), tlvs.get(T_CONTAINER));
+						droppedPackets.addLink(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME));
 					}
 					else
 					{
@@ -240,68 +239,21 @@ public class Controller extends Node {
 
 	public synchronized ArrayList<String> getForwardersOnIP(String epID)
 	{
-		int netIndex = networksF.contains(epID);
+		ArrayList<String> toReturn = networksToF.getAllByEnd(epID);
 
-		if(netIndex == -1)
+		if(toReturn.size() < 1)
 		{
 			System.out.println("WARNING: " + epID + " had no forwarders.");
 			return new ArrayList<String>();
 		}
 
-		return networksF.getAllByOrigin(epID);
+		return toReturn;
 	}
 
-	//Returns 1 if found ep, 0 if not, true return is hops array though
+	//Returns 1 if found ep, 0 if not, true return is hops array though. BFS
 	public synchronized int getHops(String forwarderOrigin, String destination, ArrayList<String> passed, ArrayList<String> hops)
 	{
-		int recursive = 0;
-		ArrayList<String> futureChecks = new ArrayList<String>();
-
-		passed.add(forwarderOrigin);
-
-		for(int i = 0; i < networksF.size(); i++)
-		{
-			ArrayList<String> forwardersOnNetwork =  networksF.getAllByOrigin(i);
-			if(forwardersOnNetwork.contains(forwarderOrigin))
-			{
-				forwardersOnNetwork.removeAll(passed);
-
-				for(int j = 0; j < forwardersOnNetwork.size(); j++)
-				{
-					String currentForwarder = forwardersOnNetwork.get(j);
-
-					ArrayList<String> endpointsOnForwarders = forwardersE.getAllByOrigin(currentForwarder);
-
-					int epIndex = -1;
-					if(endpointsOnForwarders != null)
-					{
-						epIndex = endpointsOnForwarders.indexOf(destination);
-					}
-						
-					if(epIndex != -1)
-					{
-						hops.add(currentForwarder);
-						return 1;
-					}
-					else
-					{
-						if(!futureChecks.contains(currentForwarder))
-							futureChecks.add(currentForwarder);
-					}
-				}
-			}
-		}
-
-		for(int i = 0; i < futureChecks.size(); i++)
-		{
-			recursive = getHops(futureChecks.get(i), destination, passed, hops);
-			if(recursive == 1)
-			{
-				hops.add(0, futureChecks.get(i));
-				return recursive;
-			}
-		}
-		return recursive;
+		
 	}
 
 	/**
