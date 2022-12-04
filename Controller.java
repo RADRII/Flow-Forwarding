@@ -74,6 +74,8 @@ public class Controller extends Node {
 							encoding = encoding.substring(beginIndex+l);
 					}
 
+					updateRoutingTable(forwarderName);
+
 					System.out.println("Sending ACK to " + forwarderName);
 
                     DatagramPacket ack;
@@ -256,28 +258,54 @@ public class Controller extends Node {
 		passed.add(forwarderOrigin);
 		if(forwarderOrigin.equals(destination))
 		{
+			System.out.println("AHAHAHAHA");
 			hops.remove(forwarderOrigin);
 			return new ArrayList<String>(hops);
 		}
 		
 		ArrayList<String> neighbors = routingTable.getAllByEnd(forwarderOrigin);
+
+		System.out.println("DUHWUIFHIOWFHU");
+		ArrayList<Link> l = routingTable.getGraph();
+		for(int i = 0; i < l.size(); i++)
+		{
+			System.out.println(l.get(i).start + "     " + l.get(i).end);
+		}
 		neighbors.removeAll(passed);
 
 		ArrayList<String> toReturn = null;
 		for(int i = 0; i < neighbors.size(); i++)
 		{
-			hops.add(neighbors.get(i));
-			ArrayList<String> newRecursion = getHops(neighbors.get(i), destination, passed, hops);
-			if(toReturn == null)
-				toReturn = newRecursion;
-			else if(toReturn != null && newRecursion != null && toReturn.size() > newRecursion.size())
-				toReturn = new ArrayList<String>(newRecursion);
-			hops.remove(neighbors.get(i));
+			if(!passed.contains(neighbors.get(i)))
+			{
+				hops.add(neighbors.get(i));
+				ArrayList<String> newRecursion = getHops(neighbors.get(i), destination, passed, hops);
+				if(toReturn == null)
+					toReturn = newRecursion;
+				else if(toReturn != null && newRecursion != null && toReturn.size() > newRecursion.size())
+					toReturn = new ArrayList<String>(newRecursion);
+				hops.remove(neighbors.get(i));
 
-			if(toReturn != null)
-				passed.remove(neighbors.get(i));
+				if(toReturn != null)
+					passed.remove(neighbors.get(i));
+			}
 		}
 		return toReturn;
+	}
+
+	public void updateRoutingTable(String fAdded)
+	{
+		ArrayList<String> networksFOn = networksToF.getAllByEnd(fAdded);
+		for(int i = 0; i < networksFOn.size(); i++)
+		{
+			ArrayList<String> forwardersOnNetwork = networksToF.getAllByEnd(networksFOn.get(i));
+			for(int j = 0; j < forwardersOnNetwork.size(); j++)
+			{
+				if(!forwardersOnNetwork.get(j).equals(fAdded))
+					routingTable.addLink(fAdded, forwardersOnNetwork.get(j));
+			}
+		}
+		
 	}
 
 	/**

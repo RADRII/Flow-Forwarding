@@ -8,6 +8,11 @@ public class Graph {
         graph = new ArrayList<Link>();
     }
 
+    public ArrayList<Link> getGraph()
+    {
+        return graph;
+    }
+
     public ArrayList<String> getAllByEnd(String origin)
     {
         ArrayList<String> toReturn = new ArrayList<String>();
