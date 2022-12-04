@@ -175,6 +175,9 @@ public class Forwarder extends Node {
                         ArrayList<String> encodings = ((TLVPacket)content).readEncodingList();
                         String hopName = encodings.get(3);
 
+                        //Add hop to forwardingtable
+                        forwardingTable.put(tlvs.get(T_DEST_NAME), hopName);
+
                         //Creating new val which is the same encoding but minus the next hop 
                         String val = "";
                         for(int i = 0; i < encodings.size(); i++)
