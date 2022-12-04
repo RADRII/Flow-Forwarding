@@ -16,10 +16,10 @@ public abstract class Node {
 	public static final String MESSAGE_PACKET =  "2";
 	public static final String CON_ENDPOINT =  "3";
 	public static final String CON_FORWARDER =  "4";
-	public static final String FLOW_CONTROL_RES =  "5";
-	public static final String FLOW_CONTROL_REQ =  "6";
-	public static final String FORWARDER_LIST = "7";
-	public static final String FORWARDER_LIST_REQ = "8";
+	public static final String FLOW_CONTROL_REQ =  "5";
+	public static final String FLOW_CONTROL_RES =  "6";
+	public static final String FORWARDER_LIST_REQ = "7";
+	public static final String FORWARDER_LIST = "8";
 
 	public static final String T_MESSAGE = "1";
 	public static final String T_NETWORK = "2";
