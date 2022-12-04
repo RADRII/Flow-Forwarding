@@ -136,8 +136,13 @@ public class Forwarder extends Node {
                             String containerNameEP = tlvs.get(T_DEST_NAME);
                             if(isForwarderHop)
                                 containerNameEP = forwardingTable.get(tlvs.get(T_DEST_NAME));
+
                             InetAddress ip = InetAddress.getByName(containerNameEP); 	
-                            InetSocketAddress currentDstAddress = new InetSocketAddress(ip, Integer.parseInt(forwardingTable.get(containerNameEP)));
+                            InetSocketAddress currentDstAddress;
+                            if(!isForwarderHop) 
+                                currentDstAddress = new InetSocketAddress(ip, Integer.parseInt(forwardingTable.get(containerNameEP)));
+                            else
+                                currentDstAddress = new InetSocketAddress(ip, DEFAULT_SRC_PORT);
 
                             packet.setSocketAddress(currentDstAddress);
                             socket.send(packet);
