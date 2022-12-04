@@ -122,19 +122,27 @@ public class Forwarder extends Node {
                 {
                     if(forwardingTable.containsKey(tlvs.get(T_DEST_NAME)))
                         {
-                            if(waitingForBacklog == false)
+                            boolean isForwarderHop = !Character.isDigit(forwardingTable.get(tlvs.get(T_DEST_NAME)).charAt(0));
+                            if(isForwarderHop)
+                            {
+                                //if the first char isn't a digit, it's a forwarder hop and not a direct to ep 
+                                System.out.println(tlvs.get(T_DEST_NAME) + " found in forwarding table via " + forwardingTable.get(tlvs.get(T_DEST_NAME)) + " - Sending packet.");
+                            }
+                            else if(waitingForBacklog == false)
                                 System.out.println(tlvs.get(T_DEST_NAME) + " found in forwarding table - Sending packet.");
                             else
                                 System.out.println("Backlog message received for " + tlvs.get(T_DEST_NAME) + ", sending on.");
 
                             String containerNameEP = tlvs.get(T_DEST_NAME);
+                            if(isForwarderHop)
+                                containerNameEP = forwardingTable.get(tlvs.get(T_DEST_NAME));
                             InetAddress ip = InetAddress.getByName(containerNameEP); 	
                             InetSocketAddress currentDstAddress = new InetSocketAddress(ip, Integer.parseInt(forwardingTable.get(containerNameEP)));
-                            
+
                             packet.setSocketAddress(currentDstAddress);
                             socket.send(packet);
 
-                            if(waitingForBacklog == false)
+                            if(waitingForBacklog == false || isForwarderHop)
                             {
                                 System.out.println("Sending ACK to " + tlvs.get(T_DEST_NAME));
                                 DatagramPacket ack;
@@ -144,14 +152,17 @@ public class Forwarder extends Node {
                                 socket.send(ack);
 
                                 //REMOVE CONNECRTION AFTER SINCE ENDPOINT WILL STOP RECEIVING
-                                System.out.println("Removing Connection");
-                                forwardingTable.remove(containerNameEP);
-
-                                DatagramPacket connectSend;
-                                val = T_MESSAGE + "3DIS" + T_CONTAINER + Integer.toString(containerNameEP.length()) + containerNameEP;
-                                connectSend= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
-                                connectSend.setSocketAddress(dstAddress);
-                                socket.send(connectSend);
+                                if(!isForwarderHop)
+                                {
+                                    System.out.println("Removing Connection");
+                                    forwardingTable.remove(containerNameEP);
+                                
+                                    DatagramPacket connectSend;
+                                    val = T_MESSAGE + "3DIS" + T_CONTAINER + Integer.toString(containerNameEP.length()) + containerNameEP;
+                                    connectSend= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
+                                    connectSend.setSocketAddress(dstAddress);
+                                    socket.send(connectSend);
+                                }
                             }
                         }
                     else if(tlvs.containsKey(T_CONTAINER))
@@ -226,10 +237,10 @@ public class Forwarder extends Node {
                         hops = hops.substring(2+hopNameL);
                     }
 
-                    //need to declare final because java was complaining
-                    final String trueHops = hops;
+                    //adding forwarder hop to table
+                    forwardingTable.put(tlvs.get(T_DEST_NAME), hopName);
 
-                    sendBackLogs(Integer.parseInt(((TLVPacket)content).getPacketLength())-2, tlvs.get(T_DEST_NAME), trueHops, hopName);
+                    sendBackLogs(Integer.parseInt(((TLVPacket)content).getPacketLength())-2, tlvs.get(T_DEST_NAME), hops, hopName);
                 }
                 else
                 {
