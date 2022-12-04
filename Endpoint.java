@@ -109,6 +109,8 @@ public class Endpoint extends Node
 			endpointTerminal.println("Type 'receive' to receive packets or 'send' to send.");
 
 			String userInput = endpointTerminal.read("Type Here");
+			endpointTerminal.println("--> "+ userInput);
+
 			if(userInput != null && userInput.equals("receive"))
 			{
 				endpointTerminal.println("Connecting to this network's Forwarder/s");
@@ -145,6 +147,8 @@ public class Endpoint extends Node
 				while(true)
 				{
 					containerName = endpointTerminal.read("Type Name Here");
+					endpointTerminal.println("--> "+ containerName);
+
 					if(containerName == null)
 						endpointTerminal.println("Invalid Response");
 					else if(containerName.equals(containerAlias))
@@ -152,19 +156,20 @@ public class Endpoint extends Node
 					else
 						break;
 				}
-				endpointTerminal.println("--> "+ containerName);
 
 				endpointTerminal.println("Enter the message to send. Message cannot begin with a number.");
 				String message;
 				while(true)
 				{
 					message = endpointTerminal.read("Type Message Here");
+					endpointTerminal.println("--> "+ message);
+					
 					if(message == null || message.length() < 1 || Character.isDigit(message.charAt(0)))
 						endpointTerminal.println("Invalid Response");
 					else
 						break;
 				}
-				endpointTerminal.println("--> "+ message);
+			
 				String containerLength = Integer.toString(containerName.length()); 
 				String messageLength = Integer.toString(message.length()); 
 
@@ -178,7 +183,6 @@ public class Endpoint extends Node
 			}
 			else
 			{
-				endpointTerminal.println("--> "+ userInput);
 				endpointTerminal.println("Not a valid input.");
 			}
 		}
