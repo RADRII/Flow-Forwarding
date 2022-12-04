@@ -152,6 +152,8 @@ public class Endpoint extends Node
 					else
 						break;
 				}
+				endpointTerminal.println(containerName);
+
 				endpointTerminal.println("Enter the message to send. Message cannot begin with a number.");
 				String message;
 				while(true)
@@ -162,6 +164,7 @@ public class Endpoint extends Node
 					else
 						break;
 				}
+				endpointTerminal.println(message);
 				String containerLength = Integer.toString(containerName.length()); 
 				String messageLength = Integer.toString(message.length()); 
 
