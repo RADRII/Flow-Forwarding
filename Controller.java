@@ -112,9 +112,9 @@ public class Controller extends Node {
 								}
 								else
 								{
-									ArrayList<String> hops = new ArrayList<String>();
+									ArrayList<String> traverse = new ArrayList<String>();
 									ArrayList<String> passed = new ArrayList<String>();
-									getHops(forwarder, dest, passed, hops);
+									ArrayList<String> hops = getHops(forwarder, dest, passed, traverse);
 
 									if(hops.size() < 1)
 									{
@@ -186,9 +186,9 @@ public class Controller extends Node {
 				else if(type.equals(FLOW_CONTROL_REQ))
                 {
                     System.out.println("Looking for " + tlvs.get(T_DEST_NAME) + " in forwarding table.");
-					ArrayList<String> hops = new ArrayList<String>();
+					ArrayList<String> traverse = new ArrayList<String>();
 					ArrayList<String> passed = new ArrayList<String>();
-					getHops(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME), passed, hops);
+					ArrayList<String> hops = getHops(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME), passed,traverse);
 
 					DatagramPacket flowRes;
 					if(hops.size() < 1)
@@ -250,10 +250,34 @@ public class Controller extends Node {
 		return toReturn;
 	}
 
-	//Returns 1 if found ep, 0 if not, true return is hops array though. BFS
-	public synchronized int getHops(String forwarderOrigin, String destination, ArrayList<String> passed, ArrayList<String> hops)
+	//Returns 1 if found ep, 0 if not, true return is path array though. DFS
+	public synchronized ArrayList<String> getHops(String forwarderOrigin, String destination, ArrayList<String> passed,  ArrayList<String> hops)
 	{
+		passed.add(forwarderOrigin);
+		if(forwarderOrigin.equals(destination))
+		{
+			hops.remove(forwarderOrigin);
+			return new ArrayList<String>(hops);
+		}
 		
+		ArrayList<String> neighbors = routingTable.getAllByEnd(forwarderOrigin);
+		neighbors.removeAll(passed);
+
+		ArrayList<String> toReturn = null;
+		for(int i = 0; i < neighbors.size(); i++)
+		{
+			hops.add(neighbors.get(i));
+			ArrayList<String> newRecursion = getHops(neighbors.get(i), destination, passed, hops);
+			if(toReturn == null)
+				toReturn = newRecursion;
+			else if(toReturn != null && newRecursion != null && toReturn.size() > newRecursion.size())
+				toReturn = new ArrayList<String>(newRecursion);
+			hops.remove(neighbors.get(i));
+
+			if(toReturn != null)
+				passed.remove(neighbors.get(i));
+		}
+		return toReturn;
 	}
 
 	/**
