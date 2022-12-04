@@ -9,7 +9,6 @@ public class Endpoint extends Node
 	static final int CONTROLLER_DST_PORT = 50000;
     static final int FORWARDER_DST_PORT = 54321;
     static final String DEFAULT_DST_NODE = "controller";
-    static final String DEFAULT_FORWARDER_NODE = "forwarderone";
     static int DEFAULT_SRC_PORT;
 
     InetSocketAddress controllerAddress;
@@ -22,17 +21,19 @@ public class Endpoint extends Node
 	 *
 	 * Attempts to create socket at given port and create an InetSocketAddress for the destinations
 	 */
-	Endpoint(Terminal t, String dstHost, int dstPort) {
+	Endpoint(String dstHost, int dstPort) {
 		try {
-            int lastChar = containerAlias.charAt((containerAlias.length()-1));;
+            int lastChar = containerAlias.charAt((containerAlias.length()-1));
             if(lastChar == 'A')
                 DEFAULT_SRC_PORT = 50001;
             else if(lastChar == 'B')
                 DEFAULT_SRC_PORT = 50002;
+			else if(lastChar == 'C')
+				DEFAULT_SRC_PORT = 50003;
             else
-                DEFAULT_SRC_PORT = 50003;
+                DEFAULT_SRC_PORT = 50004;
 
-			endpointTerminal = t;
+			endpointTerminal = new Terminal(containerAlias);
 			controllerAddress= new InetSocketAddress(dstHost, dstPort);
 			socket= new DatagramSocket(DEFAULT_SRC_PORT);
 			listener.go();
@@ -62,7 +63,6 @@ public class Endpoint extends Node
 				{
 
 					endpointTerminal.println("From " + tlvs.get(T_SENDER_NAME) + ": " + tlvs.get(T_MESSAGE));
-					this.notify();
 				}
                 else if(type.equals(FORWARDER_LIST))
                 {
@@ -105,23 +105,16 @@ public class Endpoint extends Node
         //Start User Interaction
 		while (true) 
 		{
-			endpointTerminal.println("Type 'receive' to receive packets, 'send' to send, 'quit' to quit.");
+			endpointTerminal.println("Type 'receive' to receive packets or 'send' to send.");
 
 			String userInput = endpointTerminal.read("Type Here");
-			if(userInput != null && userInput.equals("quit"))
-			{
-				endpointTerminal.println("Disconnecting from network");
-				DatagramPacket disconnect;
-				String val = T_MESSAGE + "3DIS" + T_CONTAINER + aliasLength + containerAlias;
-				disconnect= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
-				disconnect.setSocketAddress(defaultForwarderAddress);
-				socket.send(disconnect);
-				this.wait();
-				System.exit(0);
-			}
-			else if(userInput != null && userInput.equals("receive"))
+			endpointTerminal.println("--> "+ userInput);
+
+			if(userInput != null && userInput.equals("receive"))
 			{
 				endpointTerminal.println("Connecting to this network's Forwarder/s");
+				endpointTerminal.println("May receive a backlog of messages.");
+
 				DatagramPacket connectReceive;
 				String val = T_PORT + "5" + Integer.toString(DEFAULT_SRC_PORT) + T_CONTAINER + aliasLength + containerAlias;
 				connectReceive= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
@@ -153,21 +146,29 @@ public class Endpoint extends Node
 				while(true)
 				{
 					containerName = endpointTerminal.read("Type Name Here");
-					if(containerName == null || containerName.length() <= 3)
+					endpointTerminal.println("--> "+ containerName);
+
+					if(containerName == null)
 						endpointTerminal.println("Invalid Response");
+					else if(containerName.equals(containerAlias))
+						endpointTerminal.println("Invalid Response: Cannot send message to self.");
 					else
 						break;
 				}
+
 				endpointTerminal.println("Enter the message to send. Message cannot begin with a number.");
 				String message;
 				while(true)
 				{
 					message = endpointTerminal.read("Type Message Here");
-					if(message == null || message.length() < 1)
+					endpointTerminal.println("--> "+ message);
+
+					if(message == null || message.length() < 1 || Character.isDigit(message.charAt(0)))
 						endpointTerminal.println("Invalid Response");
 					else
 						break;
 				}
+			
 				String containerLength = Integer.toString(containerName.length()); 
 				String messageLength = Integer.toString(message.length()); 
 
@@ -177,7 +178,7 @@ public class Endpoint extends Node
 				messageSend.setSocketAddress(defaultForwarderAddress);
 				socket.send(messageSend);
 
-				this.wait(5000);
+				this.wait(2000);
 			}
 			else
 			{
@@ -188,9 +189,7 @@ public class Endpoint extends Node
 
     public static void main(String[] args) {
 		try {
-			Terminal endpointTerminal = new Terminal("Endpoint");
-			(new Endpoint(endpointTerminal, DEFAULT_DST_NODE, CONTROLLER_DST_PORT)).start();
-			endpointTerminal.println("Program completed");
+			(new Endpoint(DEFAULT_DST_NODE, CONTROLLER_DST_PORT)).start();
 		} catch(java.lang.Exception e) {e.printStackTrace();}
 	}
 }

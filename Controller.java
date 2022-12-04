@@ -1,4 +1,6 @@
 import java.net.DatagramSocket;
+import java.net.InetSocketAddress;
+import java.io.IOException;
 import java.net.DatagramPacket;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,9 +14,11 @@ import java.util.HashMap;
  */
 public class Controller extends Node {
 	static final int DEFAULT_SRC_PORT = 50000;
+	static final int DEFAULT_DST_PORT = 54321;
 
-    Connections forwardersE = new Connections();
-	Connections networksF = new Connections();
+	Graph networksToF = new Graph();
+	Graph routingTable = new Graph();
+	Graph droppedPackets = new Graph();
     
 	/**
 	 * Constructor
@@ -51,7 +55,7 @@ public class Controller extends Node {
 					String forwarderName = encoding.substring(2, 2+Character.getNumericValue(encoding.charAt(1)));
 					encoding = encoding.substring(2+Character.getNumericValue(encoding.charAt(1)));
 
-					System.out.println(forwarderName + " is on " + (length-1) + " networks. Sending ACK");
+					System.out.println(forwarderName + " is on " + (length-1) + " networks:");
 
 					for(int i = 0; i < length-1; i++)
 					{
@@ -62,11 +66,17 @@ public class Controller extends Node {
 							break;
 
 						String network = encoding.substring(beginIndex, beginIndex+l);
-						networksF.addConnection(network,forwarderName);
+						networksToF.addLink(network, forwarderName);
+
+						System.out.println(network);
 
 						if(i != length-1)
 							encoding = encoding.substring(beginIndex+l);
 					}
+
+					updateRoutingTable(forwarderName);
+
+					System.out.println("Sending ACK to " + forwarderName);
 
                     DatagramPacket ack;
 					String val = T_MESSAGE + "3ACK";
@@ -78,16 +88,73 @@ public class Controller extends Node {
                 {
 					String forwarderName = packet.getAddress().getHostName();
 					forwarderName = forwarderName.substring(0,forwarderName.indexOf('.')); //removing netid from end of hostname
-					int forwarderIndex = forwardersE.contains(forwarderName);
 
-					if(forwarderIndex != -1 && !tlvs.containsKey(T_PORT))
+					if(!tlvs.containsKey(T_PORT))
 					{
-						forwardersE.removeAllByConnection(tlvs.get(T_CONTAINER));
+						routingTable.removeAllByEnd(tlvs.get(T_CONTAINER));
 					}
 					else if(tlvs.containsKey(T_PORT))
 					{
 						System.out.println("Adding connection between " + forwarderName + " and " + tlvs.get(T_CONTAINER));
-						forwardersE.addConnection(forwarderName,tlvs.get(T_CONTAINER));
+						routingTable.addLink(forwarderName, tlvs.get(T_CONTAINER));
+
+						//Check if theres a dropped packet with the new connected endpoint as a destination (but not the forwarder who sent the message)
+						ArrayList<String> forwardersForUpdate = droppedPackets.getAllByEnd(tlvs.get(T_CONTAINER));
+						if(forwardersForUpdate.size() > 0) 
+						{
+							System.out.println("Checking if a path for previously dropped packets exists now.");
+							String dest = tlvs.get(T_CONTAINER);
+							for(int i = 0; i < forwardersForUpdate.size(); i++)
+							{
+								String forwarder = forwardersForUpdate.get(i);
+
+								if(forwarder.equals(forwarderName))
+								{
+									droppedPackets.removeLink(forwarder, dest);
+								}
+								else
+								{
+									ArrayList<String> traverse = new ArrayList<String>();
+									ArrayList<String> passed = new ArrayList<String>();
+									ArrayList<String> hops = getHops(forwarder, dest, passed, traverse);
+
+									if(hops == null)
+									{
+										System.out.println("Path from " + forwarder + " and " + dest + " still not found. Continue storing.");
+									}
+									else
+									{
+										System.out.println(dest + " to " + forwarder + " found in flow table, sending hops and removing from dropped packets list.");
+										int length = 1;
+										String val = T_DEST_NAME + Integer.toString(dest.length()) + dest;
+										for(int j = 0; j < hops.size(); j++)
+										{
+											String currentHop = hops.get(j);
+											val = val + T_CONTAINER + Integer.toString(currentHop.length()) + currentHop;
+											length++;
+										}
+
+										DatagramPacket flowRes= new TLVPacket(FLOW_CONTROL_RES, Integer.toString(length), val).toDatagramPacket();
+										InetSocketAddress forwarderAddress = new InetSocketAddress(forwarder, DEFAULT_DST_PORT);
+										flowRes.setSocketAddress(forwarderAddress);
+										try {
+											socket.send(flowRes);
+										} catch (IOException e) {
+											e.printStackTrace();
+										}
+										droppedPackets.removeLink(forwarder, dest);
+									}
+								}
+							}
+						}
+						System.out.println("Finished checking dropped packets, sending Ack to Connecting Forwarder.");
+						this.wait(3000); //waiting three seconds for backlogged messages to be transferred 
+
+						DatagramPacket ack;
+						String val = T_MESSAGE + "3ACK";
+						ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
+						ack.setSocketAddress(packet.getSocketAddress());
+						socket.send(ack);
 					}
 					else
 					{
@@ -96,37 +163,40 @@ public class Controller extends Node {
                 }
 				else if(type.equals(FORWARDER_LIST_REQ))
 				{
-					System.out.println(tlvs.get(T_CONTAINER) + " requesting relvent forwarders.");
+					System.out.println(tlvs.get(T_CONTAINER) + " requesting relavent forwarders.");
 					//taking ip address of endpoint and subtracting the last two digits to get network ip
 					String ip = packet.getAddress().toString();
 					ip = ip.substring(0,ip.length()-2);
 
 					//getting all forwarders that have the same base ip
 					ArrayList<String> forwarderOnIP = getForwardersOnIP(ip);
-					System.out.println("Found " + forwarderOnIP.size() + " relavent forwarders, sending names.");
+					System.out.println("Found " + forwarderOnIP.size() + " relavent forwarders: ");
 
 					DatagramPacket forwarderList;
 					String val = "";
 					for(int i = 0; i < forwarderOnIP.size(); i++)
 					{
 						val = val + T_CONTAINER + Integer.toString(forwarderOnIP.get(i).length()) + forwarderOnIP.get(i);
+						System.out.println(forwarderOnIP.get(i));
 					}
+					System.out.println("Sending list of forwarders to " + tlvs.get(T_CONTAINER));
+					
                     forwarderList= new TLVPacket(FORWARDER_LIST, Integer.toString(forwarderOnIP.size()), val).toDatagramPacket();
                     forwarderList.setSocketAddress(packet.getSocketAddress());
                     socket.send(forwarderList);
 				}
 				else if(type.equals(FLOW_CONTROL_REQ))
                 {
-                    System.out.println("Looking for " + tlvs.get(T_DEST_NAME) + " in forwarding table.");
-					ArrayList<String> hops = new ArrayList<String>();
+                    System.out.println("Looking for " + tlvs.get(T_DEST_NAME) + " in forwarding table for: " + tlvs.get(T_CONTAINER));
+					ArrayList<String> traverse = new ArrayList<String>();
 					ArrayList<String> passed = new ArrayList<String>();
-					getHops(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME), passed, hops);
+					ArrayList<String> hops = getHops(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME), passed,traverse);
 
 					DatagramPacket flowRes;
-					if(hops.size() < 1)
+					if(hops == null)
 					{
-						//todo ADD FUTURE CHECKS WHEN NEW EDNPOINTS ADDED
-						System.out.println(tlvs.get(T_DEST_NAME) + " not in flow table. Packet Dropped.");
+						System.out.println("Path from " + tlvs.get(T_CONTAINER) + " and " + tlvs.get(T_DEST_NAME) + " not found. Storing until path is found.");
+						droppedPackets.addLink(tlvs.get(T_CONTAINER), tlvs.get(T_DEST_NAME));
 					}
 					else
 					{
@@ -171,64 +241,63 @@ public class Controller extends Node {
 
 	public synchronized ArrayList<String> getForwardersOnIP(String epID)
 	{
-		int netIndex = networksF.contains(epID);
+		ArrayList<String> toReturn = networksToF.getAllByEnd(epID);
 
-		if(netIndex == -1)
+		if(toReturn.size() < 1)
 		{
 			System.out.println("WARNING: " + epID + " had no forwarders.");
 			return new ArrayList<String>();
 		}
 
-		return networksF.getAllByOrigin(epID);
+		return toReturn;
 	}
 
-	//Returns 1 if found ep, 0 if not, true return is hops array though
-	public synchronized int getHops(String forwarderOrigin, String destination, ArrayList<String> passed, ArrayList<String> hops)
+	//Returns 1 if found ep, 0 if not, true return is path array though. DFS
+	public synchronized ArrayList<String> getHops(String forwarderOrigin, String destination, ArrayList<String> passed,  ArrayList<String> hops)
 	{
-		int recursive = 0;
-		ArrayList<String> futureChecks = new ArrayList<String>();
-
-		for(int i = 0; i < networksF.size(); i++)
+		passed.add(forwarderOrigin);
+		if(forwarderOrigin.equals(destination))
 		{
-			if(!passed.contains(Integer.toString(i)))
+			hops.remove(forwarderOrigin);
+			return new ArrayList<String>(hops);
+		}
+		
+		ArrayList<String> neighbors = routingTable.getAllByEnd(forwarderOrigin);
+		neighbors.removeAll(passed);
+
+		ArrayList<String> toReturn = null;
+		for(int i = 0; i < neighbors.size(); i++)
+		{
+			if(!passed.contains(neighbors.get(i)))
 			{
-				ArrayList<String> forwardersOnNetwork =  networksF.getAllByOrigin(i);
-				if(forwardersOnNetwork.contains(forwarderOrigin))
-				{
-					forwardersOnNetwork.remove(forwarderOrigin);
-					forwardersOnNetwork.removeAll(passed);
+				hops.add(neighbors.get(i));
+				ArrayList<String> newRecursion = getHops(neighbors.get(i), destination, passed, hops);
+				if(toReturn == null)
+					toReturn = newRecursion;
+				else if(toReturn != null && newRecursion != null && toReturn.size() > newRecursion.size())
+					toReturn = new ArrayList<String>(newRecursion);
+				hops.remove(neighbors.get(i));
 
-					for(int j = 0; j < forwardersOnNetwork.size(); j++)
-					{
-						String currentForwarder = forwardersOnNetwork.get(j);
-
-						ArrayList<String> endpointsOnForwarders = forwardersE.getAllByOrigin(currentForwarder);
-						int epIndex = endpointsOnForwarders.indexOf(destination);
-						if(epIndex != -1)
-						{
-							hops.add(currentForwarder);
-							return 1;
-						}
-						else
-						{
-							futureChecks.add(currentForwarder);
-						}
-					}
-				}
+				if(toReturn != null)
+					passed.remove(neighbors.get(i));
 			}
 		}
+		return toReturn;
+	}
 
-		for(int i = 0; i < futureChecks.size(); i++)
+	public void updateRoutingTable(String fAdded)
+	{
+		ArrayList<String> networksFOn = networksToF.getAllByEnd(fAdded);
+		for(int i = 0; i < networksFOn.size(); i++)
 		{
-			passed.add(futureChecks.get(i));
-			recursive = getHops(futureChecks.get(i), destination, passed, hops);
-			if(recursive == 1)
+			ArrayList<String> forwardersOnNetwork = networksToF.getAllByEnd(networksFOn.get(i));
+			for(int j = 0; j < forwardersOnNetwork.size(); j++)
 			{
-				hops.add(0, futureChecks.get(i));
-				return recursive;
+				if(!forwardersOnNetwork.get(j).equals(fAdded))
+					routingTable.addLink(fAdded, forwardersOnNetwork.get(j));
 			}
 		}
-		return recursive;
+		
 	}
 
 	/**

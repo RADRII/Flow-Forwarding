@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
+import java.net.SocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
@@ -21,7 +22,10 @@ public class Forwarder extends Node {
 	static final int DEFAULT_SRC_PORT = 54321;
     static final int DEFAULT_DST_PORT = 50000;
 	static final String DEFAULT_DST_NODE = "controller";
+
 	InetSocketAddress dstAddress;
+    static boolean waitingForBacklog;
+    SocketAddress waiting;
 
     HashMap<String, String> forwardingTable = new HashMap<String, String>();
     HashMap<DatagramPacket, String> droppedPackets = new HashMap<DatagramPacket, String>();
@@ -33,6 +37,9 @@ public class Forwarder extends Node {
 	 */
 	Forwarder(String dstHost, int dstPort, int srcPort) {
 		try {
+            waitingForBacklog = false;
+            waiting = null;
+
 			dstAddress= new InetSocketAddress(dstHost, dstPort);
 			socket= new DatagramSocket(srcPort);
 			listener.go();
@@ -58,6 +65,25 @@ public class Forwarder extends Node {
 				if(type.equals(ACK_PACKET))
 				{
 					System.out.println("From Controller: " + tlvs.get(T_MESSAGE));
+                    if(waitingForBacklog == true)
+                    {
+                        String waitingEndpoint = ((InetSocketAddress) waiting).getHostName();
+                        waitingEndpoint = waitingEndpoint.substring(0,waitingEndpoint.indexOf('.'));
+
+                        System.out.println("Sending message backlog (if any) to " + waitingEndpoint);
+                        sendBackLogs(0,waitingEndpoint, "", waitingEndpoint);
+
+                        DatagramPacket ack;
+                        String val = T_MESSAGE + "3ACK";
+                        ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
+                        ack.setSocketAddress(waiting);
+
+                        System.out.println("Sending ACK to " + waitingEndpoint);
+                        socket.send(ack);
+
+                        waiting = null;
+                        waitingForBacklog = false;
+                    }
 				}
                 else if(type.equals(CON_ENDPOINT))
                 {
@@ -66,30 +92,16 @@ public class Forwarder extends Node {
                         System.out.println("Adding " + tlvs.get(T_CONTAINER) + " to forwarding table of forwarder");
                         forwardingTable.put(tlvs.get(T_CONTAINER), tlvs.get(T_PORT));
 
-                        DatagramPacket ack;
-                        String val = T_MESSAGE + "3ACK";
-                        ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
-                        ack.setSocketAddress(packet.getSocketAddress());
+                        waitingForBacklog = true;
+                        waiting = packet.getSocketAddress();
 
-                        System.out.println("Informing Controller");
+                        System.out.println("Informing Controller, waiting for backlogged messages to come through.");
                         packet.setSocketAddress(dstAddress);
                         socket.send(packet);
-
-                        System.out.println("Sending ACK to " + tlvs.get(T_CONTAINER));
-                        socket.send(ack);
                     }
                     else
                     {
-                        if(forwardingTable.containsKey(tlvs.get(T_CONTAINER)))
-                        {
-                            forwardingTable.remove(tlvs.get(T_CONTAINER));
-                            
-                            System.out.println("Informing Controller");
-                            packet.setSocketAddress(dstAddress);
-                            socket.send(packet);
-                        }
-
-                        System.out.println("Sending ACK to " + tlvs.get(T_CONTAINER));
+                        System.out.println("Ready to forward, sending ACK to " + tlvs.get(T_CONTAINER));
                         DatagramPacket ack;
                         String val = T_MESSAGE + "3ACK";
                         ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
@@ -101,29 +113,61 @@ public class Forwarder extends Node {
                 {
                     if(forwardingTable.containsKey(tlvs.get(T_DEST_NAME)))
                         {
-                            System.out.println(tlvs.get(T_DEST_NAME) + " found in forwarding table - Sending packet.");
+                            boolean isForwarderHop = !Character.isDigit(forwardingTable.get(tlvs.get(T_DEST_NAME)).charAt(0));
+                            if(isForwarderHop)
+                            {
+                                //if the first char isn't a digit, it's a forwarder hop and not a direct to ep 
+                                System.out.println(tlvs.get(T_DEST_NAME) + " found in forwarding table via " + forwardingTable.get(tlvs.get(T_DEST_NAME)) + " - Sending packet.");
+                            }
+                            else if(waitingForBacklog == false)
+                                System.out.println(tlvs.get(T_DEST_NAME) + " found in forwarding table - Sending message packet: " + tlvs.get(T_MESSAGE));
+                            else
+                                System.out.println("Backlog message received for " + tlvs.get(T_DEST_NAME) + ", sending on.");
 
                             String containerNameEP = tlvs.get(T_DEST_NAME);
+                            if(isForwarderHop)
+                                containerNameEP = forwardingTable.get(tlvs.get(T_DEST_NAME));
+
                             InetAddress ip = InetAddress.getByName(containerNameEP); 	
-                            InetSocketAddress currentDstAddress = new InetSocketAddress(ip, Integer.parseInt(forwardingTable.get(containerNameEP)));
-                            
+                            InetSocketAddress currentDstAddress;
+                            if(!isForwarderHop) 
+                                currentDstAddress = new InetSocketAddress(ip, Integer.parseInt(forwardingTable.get(containerNameEP)));
+                            else
+                                currentDstAddress = new InetSocketAddress(ip, DEFAULT_SRC_PORT);
+
                             packet.setSocketAddress(currentDstAddress);
                             socket.send(packet);
 
-                            //REMOVE CONNECRTION AFTER SINCE ENDPOINT MIGHT STOP RECEIVING
-                            System.out.println("Removing Connection");
-                            forwardingTable.remove(containerNameEP);
+                            if(waitingForBacklog == false || isForwarderHop)
+                            {
+                                System.out.println("Sending ACK to " + tlvs.get(T_DEST_NAME));
+                                DatagramPacket ack;
+                                String val = T_MESSAGE + "3ACK";
+                                ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
+                                ack.setSocketAddress(currentDstAddress);
+                                socket.send(ack);
 
-                            DatagramPacket connectSend;
-                            String val = T_MESSAGE + "3DIS" + T_CONTAINER + Integer.toString(containerNameEP.length()) + containerNameEP;
-                            connectSend= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
-                            connectSend.setSocketAddress(dstAddress);
-                            socket.send(connectSend);
+                                //REMOVE CONNECRTION AFTER SINCE ENDPOINT WILL STOP RECEIVING
+                                if(!isForwarderHop)
+                                {
+                                    System.out.println("Removing Connection");
+                                    forwardingTable.remove(containerNameEP);
+                                
+                                    DatagramPacket connectSend;
+                                    val = T_MESSAGE + "3DIS" + T_CONTAINER + Integer.toString(containerNameEP.length()) + containerNameEP;
+                                    connectSend= new TLVPacket(CON_ENDPOINT, "2", val).toDatagramPacket();
+                                    connectSend.setSocketAddress(dstAddress);
+                                    socket.send(connectSend);
+                                }
+                            }
                         }
                     else if(tlvs.containsKey(T_CONTAINER))
                     {
                         ArrayList<String> encodings = ((TLVPacket)content).readEncodingList();
                         String hopName = encodings.get(3);
+
+                        //Add hop to forwardingtable
+                        forwardingTable.put(tlvs.get(T_DEST_NAME), hopName);
 
                         //Creating new val which is the same encoding but minus the next hop 
                         String val = "";
@@ -156,20 +200,25 @@ public class Forwarder extends Node {
 
                         InetSocketAddress forwarderAddress = new InetSocketAddress(hopName, DEFAULT_SRC_PORT);
                         forwardMessage.setSocketAddress(forwarderAddress);
-
-
+                        socket.send(forwardMessage);
                     }
                     else
+                    {
+                        if(droppedPackets.containsValue(tlvs.get(T_DEST_NAME)))
                         {
-                            droppedPackets.put(packet, tlvs.get(T_DEST_NAME));  
-
-                            System.out.println(tlvs.get(T_DEST_NAME) + " not in this forwarders forwarding table, requesting path from controller.");
+                            System.out.println(tlvs.get(T_DEST_NAME) + " not in this forwarders forwarding table, already waiting for path.");
+                        }
+                        else
+                        {
+                            System.out.println(tlvs.get(T_DEST_NAME) + " not in this forwarders forwarding table, informing controller of need for path.");
                             int destNameLength = tlvs.get(T_DEST_NAME).length();
                             String val = T_DEST_NAME + destNameLength + tlvs.get(T_DEST_NAME) + T_CONTAINER + aliasLength + containerAlias;
                             DatagramPacket flowRequest= new TLVPacket(FLOW_CONTROL_REQ, "2", val).toDatagramPacket();
                             flowRequest.setSocketAddress(dstAddress);
                             socket.send(flowRequest);
                         }
+                        droppedPackets.put(packet, tlvs.get(T_DEST_NAME));  
+                    }
                 }
                 else if(type.equals(FLOW_CONTROL_RES))
                 {
@@ -193,32 +242,10 @@ public class Forwarder extends Node {
                         hops = hops.substring(2+hopNameL);
                     }
 
-                    //need to declare final because java was complaining
-                    final String trueHops = hops;
+                    //adding forwarder hop to table
+                    forwardingTable.put(tlvs.get(T_DEST_NAME), hopName);
 
-                    droppedPackets.forEach((datagram, dest) -> 
-                    {
-                        if(dest.equals(tlvs.get(T_DEST_NAME)))
-                        {
-                            PacketContent toModify = PacketContent.fromDatagramPacket(datagram);
-                            HashMap<String,String> mod = ((TLVPacket)toModify).readEncoding();
-
-                            DatagramPacket forwardMessage;
-                            String val = ((TLVPacket)toModify).getPacketEncoding() + trueHops;
-                            Integer l = Integer.parseInt(((TLVPacket)toModify).getPacketLength()) + Integer.parseInt(((TLVPacket)content).getPacketLength()) - 2;
-                            forwardMessage = new TLVPacket(MESSAGE_PACKET, Integer.toString(l), val).toDatagramPacket();
-
-                            System.out.println("Forwarding message " + mod.get(T_MESSAGE) + " from " + mod.get(T_SENDER_NAME) + " via " + hopName);
-                            InetSocketAddress forwarderAddress = new InetSocketAddress(hopName, DEFAULT_SRC_PORT);
-                            forwardMessage.setSocketAddress(forwarderAddress);
-
-                            try {
-                                socket.send(forwardMessage);
-                            } catch (IOException e) {
-                                e.printStackTrace();
-                            }
-                        }
-                    });
+                    sendBackLogs(Integer.parseInt(((TLVPacket)content).getPacketLength())-2, tlvs.get(T_DEST_NAME), hops, hopName);
                 }
                 else
                 {
@@ -232,6 +259,48 @@ public class Forwarder extends Node {
 		}
 		catch(Exception e) {e.printStackTrace();}
 	}
+
+    public synchronized void sendBackLogs(int hopL, String destName, String trueHops, String hopName)
+    {
+        ArrayList<DatagramPacket> toRemove = new ArrayList<DatagramPacket>();
+        droppedPackets.forEach((datagram, dest) -> 
+        {
+            if(dest.equals(destName))
+            {
+                PacketContent toModify = PacketContent.fromDatagramPacket(datagram);
+                HashMap<String,String> mod = ((TLVPacket)toModify).readEncoding();
+
+                DatagramPacket forwardMessage;
+                String val = ((TLVPacket)toModify).getPacketEncoding() + trueHops;
+                Integer l = Integer.parseInt(((TLVPacket)toModify).getPacketLength()) + hopL;
+                forwardMessage = new TLVPacket(MESSAGE_PACKET, Integer.toString(l), val).toDatagramPacket();
+
+                System.out.println("Forwarding message " + mod.get(T_MESSAGE) + " from " + mod.get(T_SENDER_NAME) + " via " + hopName);
+
+                InetSocketAddress forwardAddress;
+                if(forwardingTable.get(hopName) != null)
+                {
+                    forwardAddress = new InetSocketAddress(hopName, Integer.parseInt(forwardingTable.get(hopName)));
+                }
+                else
+                    forwardAddress = new InetSocketAddress(hopName, DEFAULT_SRC_PORT);
+                forwardMessage.setSocketAddress(forwardAddress);
+
+                toRemove.add(datagram);
+                try {
+                    socket.send(forwardMessage);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+
+        //removing previously dropped packets that were sent
+        for(int i = 0; i < toRemove.size(); i++)
+        {
+            droppedPackets.remove(toRemove.get(i));
+        }
+    }
 
 	/**
 	 * Sender Method
@@ -264,6 +333,8 @@ public class Forwarder extends Node {
         connectSend= new TLVPacket(CON_FORWARDER, Integer.toString(length), val).toDatagramPacket();
         connectSend.setSocketAddress(dstAddress);
         socket.send(connectSend);
+
+        this.wait();
 
         System.out.println("~Waiting for Contact~");
 		this.wait();
