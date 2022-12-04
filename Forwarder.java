@@ -101,16 +101,7 @@ public class Forwarder extends Node {
                     }
                     else
                     {
-                        if(forwardingTable.containsKey(tlvs.get(T_CONTAINER)))
-                        {
-                            forwardingTable.remove(tlvs.get(T_CONTAINER));
-                            
-                            System.out.println("Informing Controller of removal.");
-                            packet.setSocketAddress(dstAddress);
-                            socket.send(packet);
-                        }
-
-                        System.out.println("Sending ACK to " + tlvs.get(T_CONTAINER));
+                        System.out.println("Ready to forward, sending ACK to " + tlvs.get(T_CONTAINER));
                         DatagramPacket ack;
                         String val = T_MESSAGE + "3ACK";
                         ack= new TLVPacket(ACK_PACKET,"1", val).toDatagramPacket();
@@ -213,8 +204,6 @@ public class Forwarder extends Node {
                     }
                     else
                     {
-                        droppedPackets.put(packet, tlvs.get(T_DEST_NAME));  
-
                         if(droppedPackets.containsValue(tlvs.get(T_DEST_NAME)))
                         {
                             System.out.println(tlvs.get(T_DEST_NAME) + " not in this forwarders forwarding table, already waiting for path.");
@@ -228,6 +217,7 @@ public class Forwarder extends Node {
                             flowRequest.setSocketAddress(dstAddress);
                             socket.send(flowRequest);
                         }
+                        droppedPackets.put(packet, tlvs.get(T_DEST_NAME));  
                     }
                 }
                 else if(type.equals(FLOW_CONTROL_RES))
